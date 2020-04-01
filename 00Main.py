@@ -11,24 +11,24 @@ figure1.savefig('Figures/Fig1.pdf')
 figure1_spiketrain.savefig('Figures/Fig1_spiketrain.pdf')
 pl.close('all')
 
-# FIGURE 2
+
+# FIGURE 3 - MODELS
 # # # # # # # # # #
 
-from Scripts.fig2 import plot as plot_fig2
 
-fig2_data, fig2_gaus, fig2_model, fig2_steps = plot_fig2()
-
-fig2_data.savefig('Figures/Fig2_data.pdf')
-fig2_gaus.savefig('Figures/Fig2_gaussians.pdf')
-fig2_model.savefig('Figures/Fig2_modelres.pdf')
-fig2_steps.savefig('Figures/Fig2_modelsteps.pdf')
-pl.close('all')
-
-# FIGURE 3
-# # # # # # # # # #
 
 # FIGURE 4
 # # # # # # # # # #
+
+from Scripts.fig4 import plot as plot_fig4
+
+fig4_data, fig4_gaus, fig4_model, fig4_steps = plot_fig4()
+
+fig4_data.savefig('Figures/Fig4_data.pdf')
+fig4_gaus.savefig('Figures/Fig4_gaussians.pdf')
+fig4_model.savefig('Figures/Fig4_modelres.pdf')
+fig4_steps.savefig('Figures/Fig4_modelsteps.pdf')
+pl.close('all')
 
 # FIGURE 5
 # # # # # # # # # #
