@@ -178,7 +178,6 @@ class prob_synapse(det_synapse):
         """
         NotImplemented
 
-
 def exponential_kernels(taus, T, dt=0.1):
     """
         Get an arbitrary number of exponential decay kernels.

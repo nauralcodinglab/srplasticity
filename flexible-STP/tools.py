@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import os, inspect
 
 def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
     """
@@ -77,3 +78,8 @@ def poisson_simple(t, dt, r):
 def sigmoid(x, derivative=False):
     return x * (1 - x) if derivative else 1 / (1 + np.exp(-x))
 
+
+# DATA IMPORTING
+current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parent_dir = os.path.dirname(current_dir)
+data_fig2 = load_pickle(parent_dir + '/Data/data_fig2.pkl')
