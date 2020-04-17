@@ -12,6 +12,8 @@ import matplotlib.gridspec as gridspec
 plt.style.use('science')
 matplotlib.rc('xtick', top=False)
 matplotlib.rc('ytick', right=False)
+matplotlib.rc('ytick.minor', visible=False)
+matplotlib.rc('xtick.minor', visible=False)
 plt.rc('font', size=8)
 
 # plt.rc('text', usetex=False)
@@ -105,7 +107,7 @@ def plot_data(ax):
                                    color=c_data)
     for capline in caplines:
         capline.set_markeredgewidth(lw * 0.7)
-    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw)
+    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw*0.6)
 
     ax.set_xlim(left=-0.5, right=t_modelres)
     ax.set_ylim(bottom=0, top=4.2)
@@ -117,15 +119,14 @@ def plot_data(ax):
     ax.set_ylabel('test/control EPSC')
     ax.xaxis.set_ticks([0, 3, 6, 9, 12])
     ax.yaxis.set_ticks([0, 1, 2, 3, 4])
-    ax.minorticks_off()
 
     return ax
 
 
 def plot_modelres(ax):
     x_ax = Trange / 1000 * 0.1
-    ax.axhline(y=burstmax / uctl, c='#2c7bb6', ls='dashed', lw=lw)
-    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw)
+    ax.axhline(y=burstmax / uctl, c='#2c7bb6', ls='dashed', lw=lw*0.6)
+    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw*0.6)
     ax.text(14, burstmax / uctl + 0.2, 'burst\nmaximum', color='#2c7bb6', fontsize=5,
             usetex= False, family='sans-serif',
             verticalalignment='bottom', horizontalalignment='right')
@@ -145,7 +146,6 @@ def plot_modelres(ax):
 
     ax.xaxis.set_ticks([0, 3, 6, 9, 12])
     ax.yaxis.set_ticks([0, 1, 2, 3, 4])
-    ax.minorticks_off()
 
     return ax
 

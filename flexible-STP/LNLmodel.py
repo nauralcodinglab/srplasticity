@@ -52,6 +52,7 @@ class det_synapse(object):
         filtered_S += self.b
 
         filtered_S = np.roll(filtered_S, 1)
+        filtered_S[0] = filtered_S[1]
         mean_om = sigmoid(filtered_S)
 
         return {'filtered_s': filtered_S,
