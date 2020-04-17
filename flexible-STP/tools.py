@@ -1,6 +1,22 @@
 import numpy as np
 import pickle
 import os, inspect
+import matplotlib.pyplot as plt
+import string
+
+def add_figure_letters(axes, size = 14):
+    """
+    Function to add Letters enumerating multipanel figures.
+
+    :param axes: list of matplotlib Axis objects to enumerate
+    :param size: Font size
+    """
+
+    for n, ax in enumerate(axes):
+
+        ax.text(-0.15, 1.1, string.ascii_uppercase[n], transform=ax.transAxes,
+                size=size, weight='bold', usetex= False, family='sans-serif')
+
 
 def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
     """

@@ -1,32 +1,33 @@
 import pylab as pl
 import numpy as np
 from LNLmodel import det_gaussian, gaussian_kernel
-from tools import cm2inch
+from tools import add_figure_letters
 
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-import seaborn as sns
-
-sns.set_style("white")
-sns.set(style='ticks')
-
 
 # PLOT SETTINGS
 # # # # # # # # # #
+plt.style.use('science')
+matplotlib.rc('xtick', top=False)
+matplotlib.rc('ytick', right=False)
+plt.rc('font', size=8)
 
-#plt.rc('text', usetex=True)
-#plt.rc('font', family='sans-serif', size=10)
+# plt.rc('text', usetex=False)
+# plt.rc('font', family='sans-serif')
 
-markersize = 4
-capsize = 3
-lw = 1.5
+markersize = 2
+capsize = 2
+lw = 1
+figsize = (5.25102, 5.25102 * (2 / 3))  # From LaTeX readout of textwidth
 
-#c_gaussians = ('#984ea3', '#377eb8', '#4daf4a')
+# c_gaussians = ('#984ea3', '#377eb8', '#4daf4a')
 c_gaussians = ('#525252', '#969696', '#cccccc')
-
 c_test = '#e41a1c'
 c_zeroline = '#e41a1c'
 c_data = 'black'
+c_baseline = '#555555'
 
 t_modelsteps = 140000  # number of timesteps to plot in modelsteps plots
 t_gaussians = 140000  # number of timesteps to plot in gaussian plot
@@ -35,7 +36,6 @@ example_Tafter = 19000  # T_after for example test spike in modelsteps plot
 
 t_modelres = 14  # seconds to plot in model result plot
 
-
 # DATA (estimated from Neubrandt et al. 2018)
 # # # # # # # # # #
 
@@ -43,7 +43,6 @@ data_x = np.array([0.1, 0.5, 1.0, 2.3, 3.5, 4.8, 6.0, 7.3, 8.50, 9.50, 12.5])
 data_y = np.array([2.1, 2.7, 3.4, 3.6, 3.1, 3.3, 2.8, 2.9, 2.25, 1.65, 1.20])
 data_yerr = np.array([0.4, 0.5, 0.4, 0.4, 0.2, 0.3, 0.2, 0.6, 0.25, 0.3, 0.15])
 data_xerr = np.array([0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0.2, 0.5])
-
 
 # MODEL PARAMETERS
 # # # # # # # # # #
@@ -96,16 +95,20 @@ for testspike in Trange:
 res_burstonly = lateSTF.run(spktr)
 res_example = lateSTF.run(spktr_example)
 
+
 # PLOTTING FUNCTIONS
 # # # # # # # # # #
 
 def plot_data(ax):
-    ax.errorbar(data_x, data_y, yerr=data_yerr, xerr=data_xerr,
-                capsize=capsize, marker='s', lw=lw, markersize=markersize, color=c_data)
-    ax.axhline(y=1, c='black', ls='dashed', lw=lw)
+    (_, caplines, _) = ax.errorbar(data_x, data_y, yerr=data_yerr, xerr=data_xerr,
+                                   capsize=capsize, marker='s', lw=lw, elinewidth=lw * 0.7, markersize=markersize,
+                                   color=c_data)
+    for capline in caplines:
+        capline.set_markeredgewidth(lw * 0.7)
+    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw)
 
     ax.set_xlim(left=-0.5, right=t_modelres)
-    ax.set_ylim(bottom=0, top=4)
+    ax.set_ylim(bottom=0, top=4.2)
 
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -113,18 +116,26 @@ def plot_data(ax):
     ax.set_xlabel('time after burst (s)')
     ax.set_ylabel('test/control EPSC')
     ax.xaxis.set_ticks([0, 3, 6, 9, 12])
+    ax.yaxis.set_ticks([0, 1, 2, 3, 4])
+    ax.minorticks_off()
 
     return ax
 
 
 def plot_modelres(ax):
     x_ax = Trange / 1000 * 0.1
-    ax.axhline(y=burstmax/uctl, c='#2c7bb6', ls='dashed', lw=lw)
-    ax.axhline(y=1, c='black', ls='dashed', lw=lw)
+    ax.axhline(y=burstmax / uctl, c='#2c7bb6', ls='dashed', lw=lw)
+    ax.axhline(y=1, c=c_baseline, ls='dashed', lw=lw)
+    ax.text(14, burstmax / uctl + 0.2, 'burst\nmaximum', color='#2c7bb6', fontsize=5,
+            usetex= False, family='sans-serif',
+            verticalalignment='bottom', horizontalalignment='right')
+    ax.text(14, 0.8, 'control', fontsize = 5, color=c_baseline,
+            usetex= False, family='sans-serif',
+            verticalalignment='top', horizontalalignment='right')
 
-    ax.plot(x_ax, ratio, c=c_test, lw=lw+0.5)
+    ax.plot(x_ax, ratio, c=c_test, lw=lw)
     ax.set_xlim(left=-0.5, right=t_modelres)
-    ax.set_ylim(bottom=0, top=4)
+    ax.set_ylim(bottom=0, top=4.2)
 
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -133,24 +144,25 @@ def plot_modelres(ax):
     ax.set_ylabel('test/control EPSC')
 
     ax.xaxis.set_ticks([0, 3, 6, 9, 12])
+    ax.yaxis.set_ticks([0, 1, 2, 3, 4])
+    ax.minorticks_off()
 
     return ax
 
 
 def plot_gaussians(ax):
-
     # downsampling data for plotting
     x_ax = (np.arange(t_gaussians) * 0.0001)[::500]
     ax.plot(x_ax, ktot[:t_gaussians:500], c='black', lw=lw, ls='dashed')
 
     # ax.plot(k1[:t_gaussians], c=c_gaussians[0], lw=lw, zorder=3)
-    ax.fill_between(x_ax, 0, k1[:t_gaussians:500], color=c_gaussians[0], alpha=0.6, zorder=3)
+    ax.fill_between(x_ax, 0, k1[:t_gaussians:500], facecolor=c_gaussians[0], alpha=0.6, zorder=3)
 
     # ax.plot(k2[:t_gaussians], c=c_gaussians[1], lw=lw, zorder=2)
-    ax.fill_between(x_ax, 0, k2[:t_gaussians:500], color=c_gaussians[1], alpha=0.6, zorder=2)
+    ax.fill_between(x_ax, 0, k2[:t_gaussians:500], facecolor=c_gaussians[1], alpha=0.6, zorder=2)
 
     # ax.plot(k3[:t_gaussians], c=c_gaussians[2], lw=lw, zorder=1)
-    ax.fill_between(x_ax, 0, k3[:t_gaussians:500], color=c_gaussians[2], alpha=0.6, zorder=1)
+    ax.fill_between(x_ax, 0, k3[:t_gaussians:500], facecolor=c_gaussians[2], alpha=0.6, zorder=1)
 
     ax.set_title('Efficacy kernel $\mathbf{k}_\mu$', loc='center')
     ax.spines['right'].set_visible(False)
@@ -169,12 +181,11 @@ def plot_modelsteps(axes):
         i.axis('off')
         i.xaxis.set_ticks([])
 
-
     x_ax = (np.arange(t_gaussians) * 0.0001)[::100]
     (markers, stemlines, baseline) = axes[0].stem(x_ax, spktr_example[:t_modelsteps:100])
     plt.setp(markers, marker='', markersize=0, markeredgewidth=0)
     plt.setp(baseline, visible=False)
-    plt.setp(stemlines, linestyle="-", color="black", linewidth=0.5)
+    plt.setp(stemlines, linestyle="-", color="black", linewidth=lw *0.4)
     axes[0].set_title('Spiketrain', loc='center')
     axes[0].set_ylim(0.1)
 
@@ -189,27 +200,28 @@ def plot_modelsteps(axes):
     (markers, stemlines, baseline) = axes[3].stem(x_ax, res_example['efficacy'][:t_modelsteps:100])
     plt.setp(markers, marker='', markersize=0, markeredgewidth=0)
     plt.setp(baseline, visible=False)
-    plt.setp(stemlines, linestyle="-", color="black", linewidth=0.5)
+    plt.setp(stemlines, linestyle="-", color="black", linewidth=lw *0.4)
     axes[3].set_title('Synaptic efficacy', loc='center')
     axes[3].spines['right'].set_visible(False)
     axes[3].spines['top'].set_visible(False)
     axes[3].spines['left'].set_visible(False)
-    axes[3].tick_params(left=False, bottom=True)
+    axes[3].tick_params(which='both', width=0, left=False, bottom=False)
     axes[3].set_xlabel('time (s)')
     axes[3].xaxis.set_ticks([0, 3, 6, 9, 12])
     axes[3].yaxis.set_ticks([])
     axes[3].set_ylim(0.1)
     return axes
 
-def plot():
 
+def plot():
     # Make Figure Grid
-    fig = plt.figure(constrained_layout=True, figsize=(8, 4.8))
+    fig = plt.figure(constrained_layout=True, figsize=figsize)
     spec = gridspec.GridSpec(ncols=3, nrows=2, figure=fig, wspace=0.1, hspace=0.1)
-    #axA = fig.add_subplot(spec[0, 0])
+    axA = fig.add_subplot(spec[0, 0])
     axB = fig.add_subplot(spec[1, 0])
+    axC = fig.add_subplot(spec[0, 1])
     axD = fig.add_subplot(spec[0, 2])
-    #axE = fig.add_subplot(spec[1, 2])
+    axE = fig.add_subplot(spec[1, 2])
     subspec1 = spec[0:, 1].subgridspec(ncols=1, nrows=5, wspace=0.0, hspace=0.0)
     axC1 = fig.add_subplot(subspec1[0, 0])
     axC2 = fig.add_subplot(subspec1[1, 0])
@@ -219,10 +231,15 @@ def plot():
     axes_modelsteps = [axC2, axC3, axC4, axC5]
 
     # Make plots
+    axA.axis('off')
     axB = plot_data(axB)
+    axC.axis('off')
     axC1 = plot_gaussians(axC1)
     axes_modelsteps = plot_modelsteps(axes_modelsteps)
     axD = plot_modelres(axD)
+    axE.axis('off')
+
+    add_figure_letters([axA, axB, axC, axD, axE], size=12)
 
     return fig
 
@@ -234,6 +251,5 @@ if __name__ == '__main__':
     parent_dir = os.path.dirname(current_dir)
 
     fig = plot()
-    plt.tight_layout()
     fig.savefig(parent_dir + '/Figures/Fig4_raw.pdf')
     plt.show()
