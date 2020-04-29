@@ -28,17 +28,17 @@ figsize = (5.25102, 5.25102)  # From LaTeX readout of textwidth
 
 # COLORS
 # blue and orange (vibrant)
-c_13ca = '#ee7733'
-c_25ca = '#0077bb'
+#c_13ca = '#ee7733'
+#c_25ca = '#0077bb'
 # blue and red (vibrant)
 c_13ca = '#cc3311'
 c_25ca = '#0077bb'
 # blue and yellow (High Contrast)
-c_13ca = '#ddaa33'
-c_25ca = '#004488'
+#c_13ca = '#ddaa33'
+#c_25ca = '#004488'
 # blue and red (bright)
-c_13ca = '#ee6677'
-c_25ca = '#4477aa'
+#c_13ca = '#ee6677'
+#c_25ca = '#4477aa'
 
 c_params = ['#000000', '#BBBBBB']
 
