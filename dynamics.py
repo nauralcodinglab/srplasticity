@@ -68,3 +68,13 @@ ax4.set_xlabel('time (ms)')
 plt.savefig('dynamics.png')
 plt.show()
 
+# DYNAMICS PRESYNAPTIC
+
+# Plot 1 Spiketrain
+
+# Plot 2 Kernel + Filtered Spiketrain
+
+# Plot 3 Nonlinear Readout
+
+# Plot 4 Efficacy train
+
