@@ -5,6 +5,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from tools import get_stimvec, add_figure_letters
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 import scipy.stats as stats
 
 # PLOT SETTINGS
@@ -24,8 +26,20 @@ markersize = 3
 lw = 1
 figsize = (5.25102, 5.25102)  # From LaTeX readout of textwidth
 
+# COLORS
+# blue and orange (vibrant)
+c_13ca = '#ee7733'
+c_25ca = '#0077bb'
+# blue and red (vibrant)
 c_13ca = '#cc3311'
-c_25ca = 'black'
+c_25ca = '#0077bb'
+# blue and yellow (High Contrast)
+c_13ca = '#ddaa33'
+c_25ca = '#004488'
+# blue and red (bright)
+c_13ca = '#ee6677'
+c_25ca = '#4477aa'
+
 c_params = ['#000000', '#BBBBBB']
 
 # FITTED MODEL PARAMETERS
@@ -107,21 +121,40 @@ def plot():
     axA1 = fig.add_subplot(spec[0, 0])
     axA2 = fig.add_subplot(spec[0, 1])
     axA3 = fig.add_subplot(spec[0, 2])
+
     axB1 = fig.add_subplot(spec[1, 0])
     axB2 = fig.add_subplot(spec[1, 1])
     axB3 = fig.add_subplot(spec[1, 2])
-    axC1 = fig.add_subplot(spec[2, 0])
-    axC2 = fig.add_subplot(spec[2, 1])
-    axC3 = fig.add_subplot(spec[2, 2])
+
+    subspec1 = spec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0.0, hspace=0.0)
+    axCleft = fig.add_subplot(spec[2, 0])
+    axCleft.axis('off')
+
+    axC1 = inset_axes(axCleft,
+                      width='100%',
+                      height='100%',
+                      loc='upper left',
+                      bbox_to_anchor = (-0.05, 1, 0.55, 0.3),
+                      bbox_transform= axCleft.transAxes)
+    axC2 = inset_axes(axCleft,
+                      width='100%',
+                      height='100%',
+                      loc='lower left',
+                      bbox_to_anchor = (-0.05, -0.05, 0.55, 0.6),
+                      bbox_transform= axCleft.transAxes)
+
+    axC3 = fig.add_subplot(subspec1[0, 1])
+    axC4 = fig.add_subplot(subspec1[0, 2])
+    axC5 = fig.add_subplot(spec[2, 2])
 
     # Make plots
     axA1, axA2 = plot_cTM_mech(axA1, axA2)
     axA3 = plot_cTM_eff(axA3)
     axB1, axB2 = plot_gTM_mech(axB1, axB2)
     axB3 = plot_gTM_eff(axB3)
-    axC1, axC2, axC3 = plot_lnl(axC1, axC2, axC3)
+    axC1, axC2, axC3, axC4, axC5 = plot_lnl(axC1, axC2, axC3, axC4, axC5)
 
-    add_figure_letters([axA1, axA3, axB1, axB3, axC1, axC3], size=12)
+    add_figure_letters([axA1, axA3, axB1, axB3, axCleft, axC5], size=12)
 
     return fig
 
@@ -218,34 +251,63 @@ def plot_gTM_eff(ax):
 
     return ax
 
-def plot_lnl(ax1,ax2,ax3):
+def plot_lnl(ax1, ax2, ax3, ax4, ax5):
 
     res13 = syn_lnl_13.run(examplespikes[0])
     res25 = syn_lnl_25.run(examplespikes[0])
     t = np.arange(0, examplespikes.shape[1] * dt, dt)
 
-    ax1.plot(t, res13['filtered_s'], color=c_13ca, lw=lw)
-    ax1.plot(t, res25['filtered_s'], color=c_25ca, lw=lw)
-    ax1.set_ylim(-6, 6)
-    ax1.set_xlabel('time (ms)')
-    ax1.set_title(r'$\mathbf{k}_\mu\ast S+b$')
+    kernel = syn_lnl_13.k[0:15000:100]
+    t_k = np.arange(0, syn_lnl_13.k.shape[0] * dt, dt)/1000
+    t_k = t_k[0:15000:100]
 
-    ax2.plot(t, res13['nl_readout'], color=c_13ca, lw=lw)
-    ax2.plot(t, res25['nl_readout'], color=c_25ca, lw=lw)
+    ax1.plot(t_k, np.roll(kernel, 1), color='black', lw=lw)
+    ax1.set_xlabel('time (s)')
+    ax1.set_ylim(0, 1.5)
+    ax1.yaxis.set_ticks([])
+    ax1.set_xticks([0, 1.5])
+    ax1.set_xticklabels([0, 1.5])
+    ax1.spines['left'].set_visible(False)
+    ax1.text(0.75, 1.5, r'$\mathbf{k}_\mu$', fontsize = 10, color='black',
+            verticalalignment='top', horizontalalignment='center')
+
+
+    ax2.plot(t, res13['filtered_s']-syn_lnl_13.b, color='black', lw=lw)
+    ax2.set_ylim(-0.5, 8)
+    ax2.yaxis.set_ticks([0, 5])
     ax2.set_xlabel('time (ms)')
-    ax2.set_title(r'$f(\mathbf{k}_\mu\ast S+b)$')
+    ax2.text(75, 8, r'$\mathbf{k}_\mu\ast S$', fontsize = 10, color='black',
+            verticalalignment='top', horizontalalignment='center')
+
+
+    ax3.plot(t, res13['filtered_s'], color=c_13ca, lw=lw)
+    ax3.plot(t, res25['filtered_s'], color=c_25ca, lw=lw)
+    ax3.axhline(y=syn_lnl_13.b, c=c_13ca, ls='dashed', lw=lw)
+    ax3.axhline(y=syn_lnl_25.b, c=c_25ca, ls='dashed', lw=lw)
+    ax3.set_ylim(-6, 6)
+    ax3.yaxis.set_ticks([-6, 0, 6])
+    ax3.set_xlabel('time (ms)')
+    ax3.set_title(r'$\mathbf{k}_\mu\ast S+b$')
+
+    ax4.plot(t, res13['nl_readout'], color=c_13ca, lw=lw)
+    ax4.plot(t, res25['nl_readout'], color=c_25ca, lw=lw)
+    ax4.set_ylim(bottom=0, top=1)
+    ax4.yaxis.set_ticks([0, 0.5, 1])
+    ax4.set_yticklabels([0, 0.5, 1])
+    ax4.set_xlabel('time (ms)')
+    ax4.set_title(r'$f(\mathbf{k}_\mu\ast S+b)$')
 
     eff13 = res13['efficacy'][np.argwhere(res13['efficacy'] != 0)]
     eff25 = res25['efficacy'][np.argwhere(res25['efficacy'] != 0)]
-    ax3.plot(np.arange(1, nrspikes + 1), eff13, color=c_13ca, lw=lw, marker='o', markersize=markersize)
-    ax3.plot(np.arange(1, nrspikes + 1), eff25, color=c_25ca, lw=lw, marker='o', markersize=markersize)
-    ax3.set_xlabel('Spike number')
-    ax3.xaxis.set_ticks(np.arange(1, 6))
-    ax3.set_ylim(bottom=0, top=1)
-    ax3.set_ylabel('Efficacy')
-    ax3.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
+    ax5.plot(np.arange(1, nrspikes + 1), eff13, color=c_13ca, lw=lw, marker='o', markersize=markersize)
+    ax5.plot(np.arange(1, nrspikes + 1), eff25, color=c_25ca, lw=lw, marker='o', markersize=markersize)
+    ax5.set_xlabel('Spike number')
+    ax5.xaxis.set_ticks(np.arange(1, 6))
+    ax5.set_ylim(bottom=0, top=1)
+    ax5.set_ylabel('Efficacy')
+    ax5.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
-    return ax1, ax2, ax3
+    return ax1, ax2, ax3, ax4, ax5
 
 if __name__ == '__main__':
     import os, inspect
@@ -254,5 +316,6 @@ if __name__ == '__main__':
     parent_dir = os.path.dirname(current_dir)
 
     fig = plot()
+    plt.tight_layout()
     fig.savefig(parent_dir + '/Figures/Fig3_raw.pdf')
     plt.show()
