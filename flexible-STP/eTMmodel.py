@@ -102,7 +102,7 @@ class StaticSynapse(AbstractSynapse):
 class gTMSynapse(AbstractSynapse):
 
     """
-    Implements a synapse according to the gTM model of dynamic synapses.
+    Implements a synapse according to a generalized Tsodyks-Markram model
     """
 
     def __init__(self, n, U, f, tau_U, Z, tau_Z, tau_R, w=1):

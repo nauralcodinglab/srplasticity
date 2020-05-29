@@ -157,28 +157,6 @@ class det_gaussian(det_synapse):
                 'nl_readout': mean_om,
                 'efficacy': mean_om * spktr}
 
-class prob_synapse(det_synapse):
-    """
-       Implements a probabilistic linear-nonlinear synapse model.
-       (Currently implements a single synapse only)
-    """
-
-    def __init__(self):
-        """
-        parameter description
-        """
-        # Initialize Synapse
-        super().__init__(k, b, dt, nlin, n, w)
-
-        # MISSING: Initialize variance / mean kernel
-
-    def run(self, spktr) -> dict:
-        """
-        Computes probabilistic synaptic output for a given input spike train.
-        :param spktr: np.array of presynaptic spike trains at each time point
-        """
-        NotImplemented
-
 def exponential_kernels(taus, T, dt=0.1):
     """
         Get an arbitrary number of exponential decay kernels.

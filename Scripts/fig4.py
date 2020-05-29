@@ -238,15 +238,16 @@ def plot_modelsteps(axes):
     axes[1].axhline(y=0, c=c_zeroline, ls='dashed')
     axes[1].set_title(r'$\mathbf{k}_\mu\ast S+b$', loc='center')
 
-    axes[2].plot(x_ax, res_burstonly['nl_readout'][:t_modelsteps:100], c='black', lw=lw)
-    axes[2].set_title(r'$\mu(t) = f(\mathbf{k}_\mu\ast S+b)$', loc='center')
+    axes[2].plot(x_ax, res_burstonly['nl_readout'][:t_modelsteps:100]/res_burstonly['nl_readout'][:t_modelsteps:100][0],
+                 c='black', lw=lw)
+    axes[2].set_title(r'$f(b)^{-1} f(\mathbf{k}_\mu\ast S+b)$', loc='center')
     axes[2].axhline(y=0, c=c_zeroline, ls='dashed')
 
     (markers, stemlines, baseline) = axes[3].stem(x_ax, res_example['efficacy'][:t_modelsteps:100])
     plt.setp(markers, marker='', markersize=0, markeredgewidth=0)
     plt.setp(baseline, visible=False)
     plt.setp(stemlines, linestyle="-", color="black", linewidth=lw *0.4)
-    axes[3].set_title(r'$E(t) = \mu(t)S(t)$', loc='center')
+    axes[3].set_title(r'$E(t)$', loc='center')
     axes[3].spines['right'].set_visible(False)
     axes[3].spines['top'].set_visible(False)
     axes[3].spines['left'].set_visible(False)

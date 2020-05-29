@@ -190,17 +190,17 @@ def plot_cTM_eff(ax):
     efficacy_c = res_c['psr'][0][res_c['psr'][0] > 0]
 
     ax.plot(np.arange(1, nrspikes + 1), efficacy_c, color=c_13ca, lw=lw, marker='o', markersize=markersize)
-    ax.set_xlabel('Spike number')
+    ax.set_xlabel('spike number')
 
     res_c = syn_c_25.run(examplespikes, dt, update_all=True)
     efficacy_c = res_c['psr'][0][res_c['psr'][0] > 0]
 
     ax.plot(np.arange(1, nrspikes + 1), efficacy_c, color=c_25ca, lw=lw, marker='o', markersize=markersize)
-    ax.set_xlabel('Spike number')
+    ax.set_xlabel('spike number')
 
     ax.xaxis.set_ticks(np.arange(1, 6))
     ax.set_ylim(bottom=0, top=1)
-    ax.set_ylabel('Efficacy')
+    ax.set_ylabel('non-normalized efficacy')
     ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
     return ax
@@ -236,17 +236,17 @@ def plot_gTM_eff(ax):
     efficacy_c = res_c['psr'][0][res_c['psr'][0] > 0]
 
     ax.plot(np.arange(1, nrspikes + 1), efficacy_c, color=c_13ca, lw=lw, marker='o', markersize=markersize)
-    ax.set_xlabel('Spike number')
+    ax.set_xlabel('spike number')
 
     res_c = syn_g_25.run(examplespikes, dt, update_all=True)
     efficacy_c = res_c['psr'][0][res_c['psr'][0] > 0]
 
     ax.plot(np.arange(1, nrspikes + 1), efficacy_c, color=c_25ca, lw=lw, marker='o', markersize=markersize)
-    ax.set_xlabel('Spike number')
+    ax.set_xlabel('spike number')
 
     ax.xaxis.set_ticks(np.arange(1, 6))
     ax.set_ylim(bottom=0, top=1)
-    ax.set_ylabel('Efficacy')
+    ax.set_ylabel('non-normalized efficacy')
     ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
     return ax
@@ -301,10 +301,10 @@ def plot_lnl(ax1, ax2, ax3, ax4, ax5):
     eff25 = res25['efficacy'][np.argwhere(res25['efficacy'] != 0)]
     ax5.plot(np.arange(1, nrspikes + 1), eff13, color=c_13ca, lw=lw, marker='o', markersize=markersize)
     ax5.plot(np.arange(1, nrspikes + 1), eff25, color=c_25ca, lw=lw, marker='o', markersize=markersize)
-    ax5.set_xlabel('Spike number')
+    ax5.set_xlabel('spike number')
     ax5.xaxis.set_ticks(np.arange(1, 6))
     ax5.set_ylim(bottom=0, top=1)
-    ax5.set_ylabel('Efficacy')
+    ax5.set_ylabel('non-normalized efficacy')
     ax5.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
     return ax1, ax2, ax3, ax4, ax5

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from tools import add_figure_letters, load_pickle
+from tools import add_figure_letters, load_pickle, add_scalebar_ES
 
 
 # PLOT SETTINGS
@@ -69,23 +69,30 @@ def plot():
 
 def plot_traces(ax1, ax2):
 
+    xax = np.arange(0,traces['1.2ca'].mean(0).shape[0]*0.1,0.1)
     for trace in traces['1.2ca']:
-        ax1.plot(trace[::2], color=c_12ca_trace, lw = lw_traces)
-    ax1.plot(traces['1.2ca'].mean(0)[::2], color=c_12ca, lw = lw_traces)
-    ax1.axis('off')
+        ax1.plot(xax[::2], trace[::2], color=c_12ca_trace, lw = lw_traces)
+    ax1.plot(xax[::2], traces['1.2ca'].mean(0)[::2], color=c_12ca, lw = lw_traces)
     ax1.set_xticks([])
     ax1.set_ylim(bottom=np.min(traces['1.2ca']), top=50)
     ax1.set_title('1.2 mM $[Ca^{2+}]$', color = c_12ca,
                   fontdict={'fontsize': 8})
+    add_scalebar_ES(x_units='ms', y_units='pA', anchor=(0.3, 0.1),
+                    x_size=20, y_size=100, y_label_space=0.02, x_label_space=-0.1,
+                    bar_space=0, x_on_left=False, linewidth=0.5, remove_frame=True,
+                    omit_x=False, omit_y=False, round=True, usetex=True, ax=ax1)
 
     for trace in traces['2.5ca']:
-        ax2.plot(trace[::2], color=c_25ca_trace, lw = lw_traces)
-    ax2.plot(traces['2.5ca'].mean(0)[::2], color=c_25ca, lw = lw_traces)
-    ax2.axis('off')
+        ax2.plot(xax[::2], trace[::2], color=c_25ca_trace, lw = lw_traces)
+    ax2.plot(xax[::2], traces['2.5ca'].mean(0)[::2], color=c_25ca, lw = lw_traces)
     ax2.set_xticks([])
     ax2.set_ylim(bottom=np.min(traces['2.5ca']), top=50)
     ax2.set_title('2.5 mM $[Ca^{2+}]$',color = c_25ca,
                   fontdict={'fontsize': 8})
+    add_scalebar_ES(x_units='ms', y_units='pA', anchor=(0.3, 0.15),
+                    x_size=20, y_size=500, y_label_space=0.02, x_label_space=-0.1,
+                    bar_space=0, x_on_left=False, linewidth=0.5, remove_frame=True,
+                    omit_x=False, omit_y=False, round=True, usetex=True, ax=ax2)
 
     return ax1, ax2
 
