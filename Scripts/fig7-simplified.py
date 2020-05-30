@@ -1,3 +1,12 @@
+# # # # # #
+# 'Synaptic Dynamics as Convolutional Units'
+#
+# Simplified Code for Figure 7
+#
+# IMPROTANT: This code has been modified to use shorter spike trains and less iterations, to reduce the runtime of the script for
+# illustrative abd testing purposes.
+# Refer to the Script fig7-simplified.py for the version included in the paper.
+# # # # # #
 
 import numpy as np
 import math
@@ -26,12 +35,12 @@ matplotlib.rc('xtick.minor', visible=False)
 matplotlib.rc('axes.spines', top=False, right=False)
 plt.rc('font', size=8)
 
-# plt.rc('text', usetex=False)
-# plt.rc('font', family='sans-serif')
+plt.rc('text', usetex=False)
+plt.rc('font', family='sans-serif')
 
 markersize = 3
 lw = 1
-figsize = (5.25102, 5.25102*0.75)  # From LaTeX readout of textwidth
+figsize = (5.25102, 5.25102)  # From LaTeX readout of textwidth
 
 import matplotlib.gridspec as gridspec
 
@@ -466,4 +475,4 @@ axI.set_xticks([0, 50, 100, 150])
 axI.plot([0, 170], [.003, .003], 'k:')
 sns.despine()
 
-plt.savefig('../Figures/Fig7-raw.pdf', format='pdf')
+plt.savefig('../Figures/Fig7-raw-simplified.pdf', format='pdf')
