@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
+
 class AbstractSynapse(ABC):
     """
     Abstract base method for a synapse model.
@@ -36,6 +37,7 @@ class AbstractSynapse(ABC):
         """
         self.out = np.zeros(self.n)  # empty matrix of synaptic output
 
+
 class StaticSynapse(AbstractSynapse):
     """
     Specifies a static synapse between one or two populations of neurons.
@@ -66,19 +68,20 @@ class StaticSynapse(AbstractSynapse):
         Computes synaptic output for a given input spike train.
         """
 
-        assert spiketrain.shape[0] == self.n, 'Spike train does not correspond to number of synapses.'
+        assert (
+            spiketrain.shape[0] == self.n
+        ), "Spike train does not correspond to number of synapses."
 
         # Time vector
         t = np.arange(0, spiketrain.shape[1] * dt, dt)
         assert len(t) == spiketrain.shape[1]
         steps = len(t)
 
-        result = {'psr': np.zeros((self.n, steps)),
-                  't': t}
+        result = {"psr": np.zeros((self.n, steps)), "t": t}
 
         for step in range(steps):
             self.update(s=spiketrain[step], dt=dt)
-            result['psr'][..., step] = self.out
+            result["psr"][..., step] = self.out
 
         self.reset_()
 
@@ -89,15 +92,14 @@ class StaticSynapse(AbstractSynapse):
         Computes synaptic output given a vector of presynaptic ISIs.
         """
 
-        ISIvector[0] = 0 # first spike is always assumed to have no spike history.
-
-
+        ISIvector[0] = 0  # first spike is always assumed to have no spike history.
 
     def reset_(self) -> None:
         """
         Resets synapses
         """
         super().reset_()
+
 
 class gTMSynapse(AbstractSynapse):
 
@@ -133,7 +135,7 @@ class gTMSynapse(AbstractSynapse):
         self.z = self.Z.copy()
         self.R = np.ones(self.n)
         self.deltaS = np.zeros(self.n)  # Time since previous spike
-        self.spikecount = np.zeros(self.n) # Spike counter
+        self.spikecount = np.zeros(self.n)  # Spike counter
 
     def update(self, s, dt) -> None:
         """
@@ -144,17 +146,31 @@ class gTMSynapse(AbstractSynapse):
 
         # Spike vector to matrix considering synaptic strength
 
-        for n in np.argwhere(s==1):  # loop through spiking neurons
-            if self.spikecount[n] != 0:  # Only update if neuron is not spiking for the first time
+        for n in np.argwhere(s == 1):  # loop through spiking neurons
+            if (
+                self.spikecount[n] != 0
+            ):  # Only update if neuron is not spiking for the first time
 
                 decayR = np.exp(-self.deltaS[n] / self.tau_R[n])
                 decayU = np.exp(-self.deltaS[n] / self.tau_U[n])
                 decayZ = np.exp(-self.deltaS[n] / self.tau_Z[n])
 
-                self.R[n] = 1 - (1 - self.R[n]) * decayR - self.R[n] * self.u[n] * self.z[n] * decayR
+                self.R[n] = (
+                    1
+                    - (1 - self.R[n]) * decayR
+                    - self.R[n] * self.u[n] * self.z[n] * decayR
+                )
                 u_jump = self.u[n] + self.f[n] * self.u[n] * (1 - self.u[n])
                 self.u[n] = self.U[n] + (u_jump - self.U[n]) * decayU
-                self.z[n] = self.Z[n] + (self.z[n] + np.heaviside(u_jump - self.z[n], 0) * (u_jump - self.z[n]) - self.Z[n]) * decayZ
+                self.z[n] = (
+                    self.Z[n]
+                    + (
+                        self.z[n]
+                        + np.heaviside(u_jump - self.z[n], 0) * (u_jump - self.z[n])
+                        - self.Z[n]
+                    )
+                    * decayZ
+                )
 
             self.deltaS[n] = 0  # set time since spike to zero
             self.spikecount[n] += 1  # add to spike counter
@@ -182,11 +198,19 @@ class gTMSynapse(AbstractSynapse):
         self.R_temp = 1 - (1 - self.R) * decayR - self.R * self.u * self.z * decayR
         u_jump = self.u + self.f * self.u * (1 - self.u)
         self.u_temp = self.U + (u_jump - self.U) * decayU
-        self.z_temp = self.Z + (self.z + np.heaviside(u_jump - self.z, 0) * (u_jump - self.z) - self.Z) * decayZ
+        self.z_temp = (
+            self.Z
+            + (self.z + np.heaviside(u_jump - self.z, 0) * (u_jump - self.z) - self.Z)
+            * decayZ
+        )
 
-        spiking = np.argwhere(s==1).flatten()  # spiking neurons
-        againspiking = spiking[np.argwhere(self.spikecount[spiking] > 0).flatten()] # neurons that don't spike for the first time
-        neverspiking = np.argwhere(self.spikecount == 0) # neurons that don't spike for the first time
+        spiking = np.argwhere(s == 1).flatten()  # spiking neurons
+        againspiking = spiking[
+            np.argwhere(self.spikecount[spiking] > 0).flatten()
+        ]  # neurons that don't spike for the first time
+        neverspiking = np.argwhere(
+            self.spikecount == 0
+        )  # neurons that don't spike for the first time
 
         # accept update for neurons that spike for the second or more time
         self.R[againspiking] = self.R_temp[againspiking]
@@ -209,7 +233,7 @@ class gTMSynapse(AbstractSynapse):
         self.deltaS += dt
         super().update(s, dt)
 
-    def run(self, spiketrain, dt, update_all = False) -> dict:
+    def run(self, spiketrain, dt, update_all=False) -> dict:
         """
         Computes synaptic output for a given input spike train.
         :param spiketrain: np.array of presynaptic spike trains at each time point
@@ -218,7 +242,9 @@ class gTMSynapse(AbstractSynapse):
         (u, R, Z) are returned. If false, ODEs are integrated between spikes for efficient numerical implementation.
         """
 
-        assert spiketrain.shape[0] == self.n, 'Spike train does not correspond to number of synapses.'
+        assert (
+            spiketrain.shape[0] == self.n
+        ), "Spike train does not correspond to number of synapses."
 
         # Time vector
         t = np.arange(0, spiketrain.shape[1] * dt, dt)
@@ -232,32 +258,32 @@ class gTMSynapse(AbstractSynapse):
             self.z_temp = self.z.copy()
 
             # Initialize result matrices
-            result = {'psr': np.zeros((self.n, steps)),
-                      'u': np.zeros((self.n, steps)),
-                      'z': np.zeros((self.n, steps)),
-                      'R': np.zeros((self.n, steps)),
-                      't': t}
+            result = {
+                "psr": np.zeros((self.n, steps)),
+                "u": np.zeros((self.n, steps)),
+                "z": np.zeros((self.n, steps)),
+                "R": np.zeros((self.n, steps)),
+                "t": t,
+            }
 
             # Loop over spike train
             for step in range(steps):
                 self.update_all(s=spiketrain[..., step], dt=dt)
-                result['psr'][..., step] = self.out
-                result['u'][..., step] = self.u_temp
-                result['z'][..., step] = self.z_temp
-                result['R'][..., step] = self.R_temp
+                result["psr"][..., step] = self.out
+                result["u"][..., step] = self.u_temp
+                result["z"][..., step] = self.z_temp
+                result["R"][..., step] = self.R_temp
 
         else:
             # Initialize result matrices
-            result = {'psr': np.zeros((self.n, steps)),
-                      't': t}
+            result = {"psr": np.zeros((self.n, steps)), "t": t}
 
             # Loop over spike train
             for step in range(steps):
                 self.update(s=spiketrain[..., step], dt=dt)
-                result['psr'][..., step] = self.out
+                result["psr"][..., step] = self.out
 
         self.reset_()
-
 
         return result
 
@@ -269,9 +295,10 @@ class gTMSynapse(AbstractSynapse):
         self.z = self.Z.copy()
         self.R = np.ones(self.n)
         self.deltaS = np.zeros(self.n)  # Time since previous spike
-        self.spikecount = np.zeros(self.n) # Spike counter
+        self.spikecount = np.zeros(self.n)  # Spike counter
 
         super().reset_()
+
 
 class cTMSynapse(AbstractSynapse):
 
@@ -304,7 +331,7 @@ class cTMSynapse(AbstractSynapse):
         self.u = self.U.copy()
         self.R = np.ones(self.n)
         self.deltaS = np.zeros(self.n)  # Time since previous spike
-        self.spikecount = np.zeros(self.n) # Spike counter
+        self.spikecount = np.zeros(self.n)  # Spike counter
 
     def update(self, s, dt) -> None:
         """
@@ -315,14 +342,21 @@ class cTMSynapse(AbstractSynapse):
 
         # Spike vector to matrix considering synaptic strength
 
-        for n in np.argwhere(s==1):  # loop through spiking neurons
-            if self.spikecount[n] != 0:  # Only update if neuron is not spiking for the first time
+        for n in np.argwhere(s == 1):  # loop through spiking neurons
+            if (
+                self.spikecount[n] != 0
+            ):  # Only update if neuron is not spiking for the first time
 
                 decayR = np.exp(-self.deltaS[n] / self.tau_R[n])
                 decayU = np.exp(-self.deltaS[n] / self.tau_U[n])
 
-                self.R[n] = 1 - (1 - self.R[n]) * decayR - self.R[n] * self.u[n] * decayR
-                self.u[n] = self.U[n] + (self.u[n] + self.f[n] * (1 - self.u[n]) - self.U[n]) * decayU
+                self.R[n] = (
+                    1 - (1 - self.R[n]) * decayR - self.R[n] * self.u[n] * decayR
+                )
+                self.u[n] = (
+                    self.U[n]
+                    + (self.u[n] + self.f[n] * (1 - self.u[n]) - self.U[n]) * decayU
+                )
 
             self.deltaS[n] = 0  # set time since spike to zero
             self.spikecount[n] += 1  # add to spike counter
@@ -349,9 +383,13 @@ class cTMSynapse(AbstractSynapse):
         self.R_temp = 1 - (1 - self.R) * decayR - self.R * self.u * decayR
         self.u_temp = self.U + (self.u + self.f * (1 - self.u) - self.U) * decayU
 
-        spiking = np.argwhere(s==1).flatten()  # spiking neurons
-        againspiking = spiking[np.argwhere(self.spikecount[spiking] > 0).flatten()] # neurons that don't spike for the first time
-        neverspiking = np.argwhere(self.spikecount == 0) # neurons that don't spike for the first time
+        spiking = np.argwhere(s == 1).flatten()  # spiking neurons
+        againspiking = spiking[
+            np.argwhere(self.spikecount[spiking] > 0).flatten()
+        ]  # neurons that don't spike for the first time
+        neverspiking = np.argwhere(
+            self.spikecount == 0
+        )  # neurons that don't spike for the first time
 
         # accept update for neurons that spike for the second or more time
         self.R[againspiking] = self.R_temp[againspiking]
@@ -372,7 +410,7 @@ class cTMSynapse(AbstractSynapse):
         self.deltaS += dt
         super().update(s, dt)
 
-    def run(self, spiketrain, dt, update_all = False) -> dict:
+    def run(self, spiketrain, dt, update_all=False) -> dict:
         """
         Computes synaptic output for a given input spike train.
         :param spiketrain: np.array of presynaptic spike trains at each time point
@@ -381,7 +419,9 @@ class cTMSynapse(AbstractSynapse):
         (u, R, Z) are returned. If false, ODEs are integrated between spikes for efficient numerical implementation.
         """
 
-        assert spiketrain.shape[0] == self.n, 'Spike train does not correspond to number of synapses.'
+        assert (
+            spiketrain.shape[0] == self.n
+        ), "Spike train does not correspond to number of synapses."
 
         # Time vector
         t = np.arange(0, spiketrain.shape[1] * dt, dt)
@@ -394,30 +434,30 @@ class cTMSynapse(AbstractSynapse):
             self.R_temp = self.R.copy()
 
             # Initialize result matrices
-            result = {'psr': np.zeros((self.n, steps)),
-                      'u': np.zeros((self.n, steps)),
-                      'R': np.zeros((self.n, steps)),
-                      't': t}
+            result = {
+                "psr": np.zeros((self.n, steps)),
+                "u": np.zeros((self.n, steps)),
+                "R": np.zeros((self.n, steps)),
+                "t": t,
+            }
 
             # Loop over spike train
             for step in range(steps):
                 self.update_all(s=spiketrain[..., step], dt=dt)
-                result['psr'][..., step] = self.out
-                result['u'][..., step] = self.u_temp
-                result['R'][..., step] = self.R_temp
+                result["psr"][..., step] = self.out
+                result["u"][..., step] = self.u_temp
+                result["R"][..., step] = self.R_temp
 
         else:
             # Initialize result matrices
-            result = {'psr': np.zeros((self.n, steps)),
-                      't': t}
+            result = {"psr": np.zeros((self.n, steps)), "t": t}
 
             # Loop over spike train
             for step in range(steps):
                 self.update(s=spiketrain[..., step], dt=dt)
-                result['psr'][..., step] = self.out
+                result["psr"][..., step] = self.out
 
         self.reset_()
-
 
         return result
 
@@ -428,23 +468,27 @@ class cTMSynapse(AbstractSynapse):
         self.u = self.U.copy()
         self.R = np.ones(self.n)
         self.deltaS = np.zeros(self.n)  # Time since previous spike
-        self.spikecount = np.zeros(self.n) # Spike counter
+        self.spikecount = np.zeros(self.n)  # Spike counter
 
         super().reset_()
 
 
 # Integrated between spikes for quick implementation. Input = ISI vector
 
+
 def updateZ(Z, z, u, f, tau_Z, dt):
 
-    return Z + (z + f * np.heaviside(u-z,0) * (u-z) - Z) * np.exp(-dt / tau_Z)
+    return Z + (z + f * np.heaviside(u - z, 0) * (u - z) - Z) * np.exp(-dt / tau_Z)
+
 
 def updateU(u, f, U, tau_U, dt):
     # increase of f * u * (1-u)
-    return U + (u + f * u * (1-u) - U) * np.exp(-dt / tau_U)
+    return U + (u + f * u * (1 - u) - U) * np.exp(-dt / tau_U)
+
 
 def updateR(r, u, z, tau_R, dt):
     return 1 - (1 - r) * np.exp(-dt / tau_R) - r * z * u * np.exp(-dt / tau_R)
+
 
 def gTM_ISI(ISIvec, params):
 
@@ -452,7 +496,7 @@ def gTM_ISI(ISIvec, params):
     PSR_vec = []
 
     if np.isnan(Z):
-        Z=U
+        Z = U
 
     if np.isnan(A):
         A = 1 / (U * Z)
@@ -463,14 +507,14 @@ def gTM_ISI(ISIvec, params):
 
         if spike == 0:
             u_new = U
-            r_new =  1
+            r_new = 1
             z_new = Z
 
         else:
-            r_new = updateR(dt = dt, u = u_old, r = r_old, tau_R = tau_R, z = z_old)
-            u_jump = u_old + f * u_old * (1-u_old)
-            u_new = updateU(dt = dt, u = u_old, U = U, f = f, tau_U = tau_U)
-            z_new = updateZ(dt = dt, Z = Z, z = z_old, f=1, tau_Z = tau_Z, u = u_jump)
+            r_new = updateR(dt=dt, u=u_old, r=r_old, tau_R=tau_R, z=z_old)
+            u_jump = u_old + f * u_old * (1 - u_old)
+            u_new = updateU(dt=dt, u=u_old, U=U, f=f, tau_U=tau_U)
+            z_new = updateZ(dt=dt, Z=Z, z=z_old, f=1, tau_Z=tau_Z, u=u_jump)
 
         PSR_vec.append(PSR(A, r_new, u_new, z_new))
 
@@ -480,7 +524,8 @@ def gTM_ISI(ISIvec, params):
 
     return PSR_vec
 
-def PSR (A, Rn, Un, Zn):
+
+def PSR(A, Rn, Un, Zn):
     """
     PostSynapticResponse function for the adapted TM network
 
@@ -490,6 +535,3 @@ def PSR (A, Rn, Un, Zn):
     """
 
     return A * Rn * Un * Zn
-
-
-

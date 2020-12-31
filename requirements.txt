@@ -1,0 +1,7 @@
+# General
+numpy
+scipy
+
+# Plotting
+matplotlib
+seaborn
