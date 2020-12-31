@@ -61,9 +61,7 @@ def exponential_kernel_weighted(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += (
-            a / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += a / tau * np.exp(-t / tau)
     return kernels.sum(0)
 
 
@@ -84,9 +82,7 @@ def exponential_kernel_weighted_nosum(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += (
-            a / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += a / tau * np.exp(-t / tau)
     return kernels
 
 
@@ -121,52 +117,61 @@ def negloglikelihood_II(init_params, Y, taus, spktrain, Nstim, inds):
             lfilter(K2[i], 1, spktrain[0]) + a_sig[0],
         )
         filtered_S[i], filtered_S2[i] = roll(filtered_S[i], 1), roll(filtered_S2[i], 1)
-        tp[i], tp2[i] = array([filtered_S[i][where(spktrain[0])[0]]]), array(
-            [filtered_S2[i][where(spktrain[0])[0]]]
+        tp[i], tp2[i] = (
+            array([filtered_S[i][where(spktrain[0])[0]]]),
+            array([filtered_S2[i][where(spktrain[0])[0]]]),
         )
 
         filtered_S3[i,], filtered_S4[i,] = (
             lfilter(K[i], 1, spktrain[1]) + a_mu[0],
             lfilter(K2[i], 1, spktrain[1]) + a_sig[0],
         )
-        filtered_S3[i], filtered_S4[i] = roll(filtered_S3[i], 1), roll(
-            filtered_S4[i], 1
+        filtered_S3[i], filtered_S4[i] = (
+            roll(filtered_S3[i], 1),
+            roll(filtered_S4[i], 1),
         )
-        tp3[i], tp4[i] = array([filtered_S3[i][where(spktrain[1])[0]]]), array(
-            [filtered_S4[i][where(spktrain[1])[0]]]
+        tp3[i], tp4[i] = (
+            array([filtered_S3[i][where(spktrain[1])[0]]]),
+            array([filtered_S4[i][where(spktrain[1])[0]]]),
         )
 
         filtered_S5[i,], filtered_S6[i,] = (
             lfilter(K[i], 1, spktrain[2]) + a_mu[0],
             lfilter(K2[i], 1, spktrain[2]) + a_sig[0],
         )
-        filtered_S5[i], filtered_S6[i] = roll(filtered_S5[i], 1), roll(
-            filtered_S6[i], 1
+        filtered_S5[i], filtered_S6[i] = (
+            roll(filtered_S5[i], 1),
+            roll(filtered_S6[i], 1),
         )
-        tp5[i], tp6[i] = array([filtered_S5[i][where(spktrain[2])[0]]]), array(
-            [filtered_S6[i][where(spktrain[2])[0]]]
+        tp5[i], tp6[i] = (
+            array([filtered_S5[i][where(spktrain[2])[0]]]),
+            array([filtered_S6[i][where(spktrain[2])[0]]]),
         )
 
         filtered_S7[i,], filtered_S8[i,] = (
             lfilter(K[i], 1, spktrain[3]) + a_mu[0],
             lfilter(K2[i], 1, spktrain[3]) + a_sig[0],
         )
-        filtered_S7[i], filtered_S8[i] = roll(filtered_S7[i], 1), roll(
-            filtered_S8[i], 1
+        filtered_S7[i], filtered_S8[i] = (
+            roll(filtered_S7[i], 1),
+            roll(filtered_S8[i], 1),
         )
-        tp7[i], tp8[i] = array([filtered_S7[i][where(spktrain[3])[0]]]), array(
-            [filtered_S8[i][where(spktrain[3])[0]]]
+        tp7[i], tp8[i] = (
+            array([filtered_S7[i][where(spktrain[3])[0]]]),
+            array([filtered_S8[i][where(spktrain[3])[0]]]),
         )
 
         filtered_S9[i,], filtered_S10[i,] = (
             lfilter(K[i], 1, spktrain[4]) + a_mu[0],
             lfilter(K2[i], 1, spktrain[4]) + a_sig[0],
         )
-        filtered_S9[i], filtered_S10[i] = roll(filtered_S9[i], 1), roll(
-            filtered_S10[i], 1
+        filtered_S9[i], filtered_S10[i] = (
+            roll(filtered_S9[i], 1),
+            roll(filtered_S10[i], 1),
         )
-        tp9[i], tp10[i] = array([filtered_S9[i][where(spktrain[4])[0]]]), array(
-            [filtered_S10[i][where(spktrain[4])[0]]]
+        tp9[i], tp10[i] = (
+            array([filtered_S9[i][where(spktrain[4])[0]]]),
+            array([filtered_S10[i][where(spktrain[4])[0]]]),
         )
     tp, tp2 = vstack([tp, ones(Nstim)]), vstack([tp2, ones(Nstim)])
     tp3, tp4 = vstack([tp3, ones(Nstim)]), vstack([tp4, ones(Nstim)])
@@ -346,8 +351,9 @@ def test_plot(ind, save, spktr, dat_ind, new_dict):
         lfilter(K2, 1, spktr) + a_sig[0],
     )
     filtered_S, filtered_S2 = roll(filtered_S, 1), roll(filtered_S2, 1)
-    tp, tp2 = array([filtered_S[where(spktr)[0]]]), array(
-        [filtered_S2[where(spktr)[0]]]
+    tp, tp2 = (
+        array([filtered_S[where(spktr)[0]]]),
+        array([filtered_S2[where(spktr)[0]]]),
     )
     tp, tp2 = vstack([tp, ones(Nstim)]), vstack([tp2, ones(Nstim)])
     a_mu = array(a_mu)

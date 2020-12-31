@@ -1,6 +1,7 @@
 # General
 numpy
 scipy
+pickle5
 
 # Plotting
 matplotlib

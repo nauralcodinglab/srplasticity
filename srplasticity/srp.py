@@ -202,7 +202,7 @@ class DetSRP:
                 "filtered_spiketrain": filtered_spiketrain,
                 "nonlinear_readout": nonlinear_readout,
                 "efficacytrain": efficacytrain,
-                "efficacies": efficacies
+                "efficacies": efficacies,
             }
 
         else:
@@ -245,14 +245,20 @@ class ProbSRP(DetSRP):
         spiketimes = np.where(spiketrain == 1)[0]
         efficacytrains = np.zeros((ntrials, len(spiketrain)))
 
-        mean = self.nlin(
-            self.mu_baseline
-            + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
-        ) * spiketrain
-        sigma = self.nlin(
-            self.mu_baseline
-            + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
-        ) * spiketrain
+        mean = (
+            self.nlin(
+                self.mu_baseline
+                + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
+            )
+            * spiketrain
+        )
+        sigma = (
+            self.nlin(
+                self.mu_baseline
+                + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
+            )
+            * spiketrain
+        )
 
         # Sampling from gamma distribution
         efficacies = self._sample(mean[spiketimes], sigma[spiketimes], ntrials)
@@ -265,6 +271,8 @@ class ProbSRP(DetSRP):
         Samples `ntrials` response amplitudes from a gamma distribution given mean and sigma
         """
 
-        return np.random.gamma(shape=mean ** 2 / sigma ** 2,
-                               scale=sigma ** 2 / mean,
-                               size=(ntrials, len(np.atleast_1d(mean))))
+        return np.random.gamma(
+            shape=mean ** 2 / sigma ** 2,
+            scale=sigma ** 2 / mean,
+            size=(ntrials, len(np.atleast_1d(mean))),
+        )
