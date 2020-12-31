@@ -1,5 +1,6 @@
 /venv/
-/Richard/
-/data/raw/
-
 .idea
+
+# Raw data and script related to analysis
+/data/raw/
+/scripts/data_processing/
