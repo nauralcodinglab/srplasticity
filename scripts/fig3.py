@@ -1,17 +1,33 @@
 from eTMmodel import cTMSynapse, gTMSynapse
 from LNLmodel import det_exp
 import numpy as np
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from tools import get_stimvec, add_figure_letters
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import scipy.stats as stats
+from srplasticity.tools import get_stimvec
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# HELPER FUNCTIONS
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# TM MODEL
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 # PLOT SETTINGS
 # # # # # # # # # #
-plt.style.use("science")
+
 matplotlib.rc("xtick", top=False)
 matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
