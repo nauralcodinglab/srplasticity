@@ -17,19 +17,20 @@ fitting_tm = False
 fitting_srp = True
 draw_plot = True
 
-current_dir = Path(os.path.dirname(
-    os.path.abspath(inspect.getfile(inspect.currentframe()))
-))
+current_dir = Path(
+    os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+)
 parent_dir = Path(os.path.dirname(current_dir))
 
-modelfit_dir = current_dir / 'modelfits'
-data_dir = parent_dir / 'data' / 'processed' / 'chamberland2018'
+modelfit_dir = current_dir / "modelfits"
+data_dir = parent_dir / "data" / "processed" / "chamberland2018"
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # HELPER FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def load_pickle(filename):
     with open(filename, "rb") as file:
@@ -38,9 +39,9 @@ def load_pickle(filename):
 
 
 def save_pickle(obj, filename):
-    with open(filename, 'wb') as output:  # Overwrites any existing file.
+    with open(filename, "wb") as output:  # Overwrites any existing file.
         pickle.dump(obj, output, pickle.HIGHEST_PROTOCOL)
-        print('Object pickled and saved.')
+        print("Object pickled and saved.")
 
 
 def get_model_estimates(model, stimulus_dict):
@@ -76,11 +77,13 @@ stimulus_dict = {
 # Response amplitudes
 target_dict = {}
 for key in stimulus_dict:
-    target_dict[key] = load_pickle(Path(data_dir / str(key + "_normalized_by_cell.pkl")))
+    target_dict[key] = load_pickle(
+        Path(data_dir / str(key + "_normalized_by_cell.pkl"))
+    )
 
 # Remove in-vivo stimulation as test set
-stimulus_dict_test = {'invivo': stimulus_dict.pop('invivo')}
-target_dict_test = {'invivo': target_dict.pop('invivo')}
+stimulus_dict_test = {"invivo": stimulus_dict.pop("invivo")}
+target_dict_test = {"invivo": target_dict.pop("invivo")}
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -90,7 +93,7 @@ target_dict_test = {'invivo': target_dict.pop('invivo')}
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if fitting_tm:
-    print('Fitting TM model to Chamberland et al. (2018) data...')
+    print("Fitting TM model to Chamberland et al. (2018) data...")
 
     # Tsodyks-Markram model parameter ranges
     tm_param_ranges = (
@@ -101,19 +104,22 @@ if fitting_tm:
     )
 
     # Fit TM model to data
-    tm_params, tm_sse, grid, sse_grid = fit_tm_model(stimulus_dict, target_dict, tm_param_ranges,
-                                                 disp=True,  # display output
-                                                 workers=-1,  # split over all available CPU cores
-                                                 full_output=True,  # save function value at each grid node
-                                                 )
+    tm_params, tm_sse, grid, sse_grid = fit_tm_model(
+        stimulus_dict,
+        target_dict,
+        tm_param_ranges,
+        disp=True,  # display output
+        workers=-1,  # split over all available CPU cores
+        full_output=True,  # save function value at each grid node
+    )
 
     # Save fitted TM model parameters
-    save_pickle(tm_params, modelfit_dir / 'chamberland2018_TMmodel.pkl')
+    save_pickle(tm_params, modelfit_dir / "chamberland2018_TMmodel.pkl")
 
 
 else:
-    print('Loading fitted TM model parameters...')
-    tm_params = load_pickle(modelfit_dir / 'chamberland2018_TMmodel.pkl')
+    print("Loading fitted TM model parameters...")
+    tm_params = load_pickle(modelfit_dir / "chamberland2018_TMmodel.pkl")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -122,10 +128,10 @@ else:
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if fitting_srp:
-    print('Fitting SRP model to Chamberland et al. (2018) data...')
+    print("Fitting SRP model to Chamberland et al. (2018) data...")
 
 else:
-    print('Loading fitted SRP model parameters...')
+    print("Loading fitted SRP model parameters...")
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -137,12 +143,27 @@ else:
 tm_train = get_model_estimates(TsodyksMarkramModel(*tm_params), stimulus_dict)
 tm_test = get_model_estimates(TsodyksMarkramModel(*tm_params), stimulus_dict_test)
 
-#srp_train = get_model_estimates(SRPmodel(*srp_params), stimulus_dict)
-#srp_test = get_model_estimates(SRPmodel(*srp_params), stimulus_dict_test)
+# srp_train = get_model_estimates(SRPmodel(*srp_params), stimulus_dict)
+# srp_test = get_model_estimates(SRPmodel(*srp_params), stimulus_dict_test)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
-# PLOTTING
+# PLOTTING FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def plot():
+    NotImplemented
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PLOTTING SCRIPT
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if __name__ == "__main__":
+    NotImplemented
+

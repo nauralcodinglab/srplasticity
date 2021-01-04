@@ -10,12 +10,24 @@ This module contains classes for the implementation of the SRP model.
 from abc import ABC, abstractmethod
 import numpy as np
 from scipy.signal import lfilter
+from .tools import get_stimvec
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # HELPER FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def _refactor_gamma_parameters(mu, sigma):
+    """
+    Refactor gamma parameters from mean / std to shape / scale
+    :param mu: mean parameter as given by the SRP model
+    :param sigma: standard deviation parameter as given by the SRP model
+    :return: shape and scale parameters
+    """
+    return (mu ** 2 / sigma ** 2), (sigma ** 2 / mu)
 
 
 def _sigmoid(x, derivative=False):
@@ -154,6 +166,7 @@ class ExponentialKernel(EfficiencyKernel):
             tau = taus[i]
             a = amps[i]
 
+            # set amplitude to a/tau to normalize integrals of all kernels
             self._all_exponentials[i, :] = a / tau * np.exp(-t / tau)
 
         self.kernel = self._all_exponentials.sum(0)
@@ -167,7 +180,7 @@ class ExponentialKernel(EfficiencyKernel):
 
 
 class DetSRP:
-    def __init__(self, kernel, baseline, nlin=_sigmoid, dt=0.1):
+    def __init__(self, mu_kernel, mu_baseline, mu_scale=None, nlin=_sigmoid, dt=0.1):
         """
         Initialization method for the deterministic SRP model.
 
@@ -178,23 +191,28 @@ class DetSRP:
 
         self.dt = dt
         self.nlin = nlin
-        self.mu_baseline = baseline
+        self.mu_baseline = mu_baseline
 
-        if isinstance(kernel, EfficiencyKernel):
+        if isinstance(mu_kernel, EfficiencyKernel):
             assert (
-                self.dt == kernel.dt
+                self.dt == mu_kernel.dt
             ), "Timestep of model and efficacy kernel do not match"
-            self.mu_kernel = kernel.kernel
+            self.mu_kernel = mu_kernel.kernel
         else:
-            self.mu_kernel = np.array(kernel)
+            self.mu_kernel = np.array(mu_kernel)
 
-    def run(self, spiketrain, return_all=False):
+        # If no mean scaling parameter is given, assume normalized amplitudes
+        if mu_scale is None:
+            mu_scale = 1 / self.nlin(self.mu_baseline)
+        self.mu_scale = mu_scale
+
+    def run_spiketrain(self, spiketrain, return_all=False):
 
         filtered_spiketrain = self.mu_baseline + _convolve_spiketrain_with_kernel(
             spiketrain, self.mu_kernel
         )
         nonlinear_readout = self.nlin(filtered_spiketrain)
-        efficacytrain = nonlinear_readout * spiketrain
+        efficacytrain = self.mu_scale * nonlinear_readout * spiketrain
         efficacies = efficacytrain[np.where(spiketrain == 1)[0]]
 
         if return_all:
@@ -208,10 +226,29 @@ class DetSRP:
         else:
             return efficacytrain, efficacies
 
+    def run_ISIvec(self, isivec, **kwargs):
+        """
+        Returns efficacies given a vector of inter-stimulus-intervals.
+
+        :param isivec: ISI vector
+        :param kwargs: Keyword arguments to be passed to 'run' and 'get_stimvec'
+        :return: return from `run` method
+        """
+
+        spiketrain = get_stimvec(isivec, **kwargs)
+        return self.run_spiketrain(spiketrain, **kwargs)
+
 
 class ProbSRP(DetSRP):
     def __init__(
-        self, mu_kernel, mu_baseline, sigma_kernel=None, sigma_baseline=None, **kwargs
+        self,
+        mu_kernel,
+        mu_baseline,
+        sigma_kernel,
+        sigma_baseline,
+        mu_scale=None,
+        sigma_scale=None,
+        **kwargs
     ):
         """
         Initialization method for the probabilistic SRP model.
@@ -220,6 +257,7 @@ class ProbSRP(DetSRP):
         :param mu_baseline: Float. Mean Baseline parameter
         :param sigma_kernel: Numpy Array or instance of `EfficiencyKernel`. Variance kernel.
         :param sigma_baseline: Float. Variance Baseline parameter
+        :param sigma_scale: Scaling parameter for the variance kernel
         :param **kwargs: Keyword arguments to be passed to constructor method of `DetSRP`
         """
 
@@ -240,6 +278,11 @@ class ProbSRP(DetSRP):
 
             self.sigma_baseline = sigma_baseline
 
+        # If no sigma scaling parameter is given, assume normalized amplitudes
+        if sigma_scale is None:
+            sigma_scale = 1 / self.nlin(self.sigma_baseline)
+        self.sigma_scale = sigma_scale
+
     def run_spiketrain(self, spiketrain, ntrials=1):
 
         spiketimes = np.where(spiketrain == 1)[0]
@@ -251,20 +294,22 @@ class ProbSRP(DetSRP):
                 + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
             )
             * spiketrain
+            * self.mu_scale
         )
         sigma = (
             self.nlin(
-                self.mu_baseline
-                + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
+                self.sigma_baseline
+                + _convolve_spiketrain_with_kernel(spiketrain, self.sigma_kernel)
             )
             * spiketrain
+            * self.sigma_scale
         )
 
         # Sampling from gamma distribution
         efficacies = self._sample(mean[spiketimes], sigma[spiketimes], ntrials)
         efficacytrains[:, spiketimes] = efficacies
 
-        return efficacies, efficacytrains
+        return mean[spiketimes], sigma[spiketimes], efficacies, efficacytrains
 
     def _sample(self, mean, sigma, ntrials):
         """
@@ -272,7 +317,98 @@ class ProbSRP(DetSRP):
         """
 
         return np.random.gamma(
-            shape=mean ** 2 / sigma ** 2,
-            scale=sigma ** 2 / mean,
+            *_refactor_gamma_parameters(mean, sigma),
             size=(ntrials, len(np.atleast_1d(mean))),
         )
+
+
+class ExpSRP(ProbSRP):
+    """
+    SRP model in which mu and sigma kernels are parameterized by a set of amplitudes and respective exponential
+    decay time constants.
+
+    This implementation of the SRP model is used for statistical inference of parameters and can be integrated
+    between spikes for efficient numerical implementation.
+    """
+
+    def __init__(
+        self,
+        mu_baseline,
+        mu_amps,
+        mu_taus,
+        sigma_baseline,
+        sigma_amps,
+        sigma_taus,
+        mu_scale=None,
+        sigma_scale=None,
+        **kwargs
+    ):
+
+        # Construct mu kernel and sigma kernel from amplitudes and taus
+        mu_kernel = ExponentialKernel(mu_taus, mu_amps, **kwargs)
+        sigma_kernel = ExponentialKernel(sigma_taus, sigma_amps, **kwargs)
+
+        # Construct with kernel objects
+        super().__init__(
+            mu_kernel, mu_baseline, sigma_kernel, sigma_baseline, mu_scale, sigma_scale
+        )
+
+        # Save amps and taus for version that is integrated between spikes
+        self._mu_taus = np.array(mu_taus)
+        self._sigma_taus = np.array(sigma_taus)
+
+        # normalize amplitudes by time constant to ensure equal integrals of exponentials
+        self._mu_amps = np.array(mu_amps) / self._mu_taus
+        self._sigma_amps = np.array(sigma_amps) / self._sigma_taus
+
+        # number of exp decays
+        self._nexp_mu = len(self._mu_amps)
+        self._nexp_sigma = len(self._sigma_amps)
+
+    def run_ISIvec(self, isivec, ntrials=1, fast=True, **kwargs):
+        """
+        Overrides the `run_ISIvec` method because the SRP model with
+        exponential decays can be integrated between spikes,
+        therefore speeding up computation in some cases
+        (if ISIs are large, i.e. presynaptic spikes are sparse)
+
+        :return: efficacies
+        """
+
+        # Fast evaluation (integrate between spikes)
+        if fast:
+
+            state_mu = np.zeros(self._nexp_mu)  # assume kernels have decayed to zero
+            state_sigma = np.zeros(
+                self._nexp_sigma
+            )  # assume kernels have decayed to zero
+
+            means = []
+            sigmas = []
+
+            for spike, dt in enumerate(isivec):
+
+                if spike > 0:
+                    # At the first spike, read out baseline efficacy
+                    # At every following spike, integrate over the ISI and then read out efficacy
+                    state_mu = (state_mu + self._mu_amps) * np.exp(-dt / self._mu_taus)
+                    state_sigma = (state_sigma + self._sigma_amps) * np.exp(
+                        -dt / self._sigma_taus
+                    )
+
+                # record value at spike
+                means.append(state_mu.sum())
+                sigmas.append(state_sigma.sum())
+
+            # Apply nonlinear readout
+            means = self.nlin(np.array(means) + self.mu_baseline) * self.mu_scale
+            sigmas = self.nlin(np.array(sigmas) + self.mu_baseline) * self.sigma_scale
+
+            # Sample from gamma distribution
+            efficacies = self._sample(means, sigmas, ntrials)
+
+            return means, sigmas, efficacies
+
+        # Standard evaluation (convolution of spiketrain with kernel)
+        else:
+            return super().run_ISIvec(isivec, **kwargs)

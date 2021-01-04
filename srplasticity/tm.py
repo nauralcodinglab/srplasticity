@@ -241,4 +241,3 @@ def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, **kwargs):
         args=(target_dict, stimulus_dict),
         **kwargs
     )
-
