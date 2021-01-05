@@ -402,7 +402,9 @@ class ExpSRP(ProbSRP):
 
             # Apply nonlinear readout
             means = self.nlin(np.array(means) + self.mu_baseline) * self.mu_scale
-            sigmas = self.nlin(np.array(sigmas) + self.sigma_baseline) * self.sigma_scale
+            sigmas = (
+                self.nlin(np.array(sigmas) + self.sigma_baseline) * self.sigma_scale
+            )
 
             # Sample from gamma distribution
             efficacies = self._sample(means, sigmas, ntrials)
@@ -415,4 +417,3 @@ class ExpSRP(ProbSRP):
 
     def reset(self):
         pass
-

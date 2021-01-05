@@ -25,12 +25,12 @@ def _nll(y, mu, sigma):
     :param sigma: (np.array) set of stds
     """
 
-    return np.nansum(
+    return np.nansum((
         y * (mu / sigma ** 2)
         - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / sigma ** 2))
         + np.log(gamma(mu ** 2 / sigma ** 2))
         + np.log(sigma ** 2 / mu)
-    ) / np.count_nonzero(~np.isnan(y))
+    ) / np.count_nonzero(~np.isnan(y), 0))
 
 
 def _total_loss(target_dict, mean_dict, sigma_dict):
@@ -87,14 +87,22 @@ def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):
 
     # Unroll list of initial parameters
     mu_baseline = x[0]
-    mu_amps = x[1:1+nr_mu_exps]
-    sigma_baseline = x[1+nr_mu_exps]
-    sigma_amps = x[2+nr_mu_exps : 2+nr_mu_exps+nr_sigma_exps]
+    mu_amps = x[1 : 1 + nr_mu_exps]
+    sigma_baseline = x[1 + nr_mu_exps]
+    sigma_amps = x[2 + nr_mu_exps : 2 + nr_mu_exps + nr_sigma_exps]
     sigma_scale = x[-1]
 
-    return mu_baseline, mu_amps, mu_taus, \
-           sigma_baseline, sigma_amps, sigma_taus, \
-           mu_scale, sigma_scale
+    return (
+        mu_baseline,
+        mu_amps,
+        mu_taus,
+        sigma_baseline,
+        sigma_amps,
+        sigma_taus,
+        mu_scale,
+        sigma_scale,
+    )
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -103,8 +111,17 @@ def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def fit_srp_model(initial_guess, stimulus_dict, target_dict, mu_taus, sigma_taus,
-                  mu_scale=None, bounds=None, algo='L-BFGS-B', **kwargs):
+def fit_srp_model(
+    initial_guess,
+    stimulus_dict,
+    target_dict,
+    mu_taus,
+    sigma_taus,
+    mu_scale=None,
+    bounds=None,
+    algo="L-BFGS-B",
+    **kwargs
+):
     """
     Fitting the SRP model to data using scipy.optimize.minimize
 
@@ -131,6 +148,6 @@ def fit_srp_model(initial_guess, stimulus_dict, target_dict, mu_taus, sigma_taus
         **kwargs
     )
 
-    params = _convert_fitting_params(optimizer_res['x'], mu_taus, sigma_taus, mu_scale)
+    params = _convert_fitting_params(optimizer_res["x"], mu_taus, sigma_taus, mu_scale)
 
     return (params, optimizer_res)

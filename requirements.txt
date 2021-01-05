@@ -6,3 +6,4 @@ pickle5
 # Plotting
 matplotlib
 seaborn
+spiffyplots
