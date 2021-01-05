@@ -261,7 +261,7 @@ class ProbSRP(DetSRP):
         :param **kwargs: Keyword arguments to be passed to constructor method of `DetSRP`
         """
 
-        super().__init__(mu_kernel, mu_baseline, **kwargs)
+        super().__init__(mu_kernel, mu_baseline, mu_scale, **kwargs)
 
         # If not provided, set sigma kernel to equal the mean kernel
         if sigma_kernel is None:
@@ -402,7 +402,7 @@ class ExpSRP(ProbSRP):
 
             # Apply nonlinear readout
             means = self.nlin(np.array(means) + self.mu_baseline) * self.mu_scale
-            sigmas = self.nlin(np.array(sigmas) + self.mu_baseline) * self.sigma_scale
+            sigmas = self.nlin(np.array(sigmas) + self.sigma_baseline) * self.sigma_scale
 
             # Sample from gamma distribution
             efficacies = self._sample(means, sigmas, ntrials)
@@ -412,3 +412,7 @@ class ExpSRP(ProbSRP):
         # Standard evaluation (convolution of spiketrain with kernel)
         else:
             return super().run_ISIvec(isivec, **kwargs)
+
+    def reset(self):
+        pass
+
