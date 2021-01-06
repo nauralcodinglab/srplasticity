@@ -8,11 +8,13 @@ import numpy as np
 from srplasticity.tm import fit_tm_model, TsodyksMarkramModel, _total_loss
 from srplasticity.srp import ExpSRP
 from srplasticity.inference import fit_srp_model
+
 # Plotting
 from spiffyplots import MultiPanel
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.style.use('spiffy')
+
+matplotlib.style.use("spiffy")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -22,12 +24,12 @@ matplotlib.style.use('spiffy')
 
 # Set to True to fit model parameters
 # Set to False to load fitted parameters from `scripts / modelfits`
-fitting_tm = True
-fitting_srp = False
+fitting_tm = False
+fitting_srp = True
 
 # Test data
-test_keys = ['invivo']
-train_keys = ['100', '20', '111', '20100', '10100', '10020']
+test_keys = ["invivo"]
+train_keys = ["100", "20", "20100", "10100", "10020"]
 
 # Paths
 current_dir = Path(
@@ -41,17 +43,17 @@ data_dir = current_dir / "data" / "processed" / "chamberland2018"
 # data_dir = parent_dir / "data" / "processed" / "chamberland2018"
 
 # Plots
-color= {'tm': 'blue',
-        'srp': 'darkred'}
+color = {"tm": "blue", "srp": "darkred"}
 
-protocol_names = {'100': '10 x 100 Hz',
-                  '20': '10 x 20 Hz',
-                  '111': '6 x 111 Hz',
-                  '20100': '5 x 20 Hz + 1 x 100 Hz',
-                  '10100': '5 x 10 Hz + 1 x 100 Hz',
-                  '10020': '5 x 100 Hz + 1 x 20 Hz',
-                  'invivo': 'in-vivo burst'
-                  }
+protocol_names = {
+    "100": "10 x 100 Hz",
+    "20": "10 x 20 Hz",
+    "111": "6 x 111 Hz",
+    "20100": "5 x 20 Hz + 1 x 100 Hz",
+    "10100": "5 x 10 Hz + 1 x 100 Hz",
+    "10020": "5 x 100 Hz + 1 x 20 Hz",
+    "invivo": "in-vivo burst",
+}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -81,7 +83,9 @@ def get_model_estimates(model, stimulus_dict):
         means = {}
         sigmas = {}
         for key, isivec in stimulus_dict.items():
-            means[key], sigmas[key], estimates[key] = model.run_ISIvec(isivec, ntrials=10000)
+            means[key], sigmas[key], estimates[key] = model.run_ISIvec(
+                isivec, ntrials=10000
+            )
         return means, sigmas, estimates
 
     else:
@@ -98,7 +102,9 @@ def mse(targets, estimate):
     :param estimate: 1D np.array with estimated response amplitudes of shape [n_stimulus]
     :return: mean squared errors
     """
-    return np.nansum(((targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets), 0))
+    return np.nansum(
+        ((targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets), 0)
+    )
 
 
 def mse_by_protocol(target_dict, estimates_dict):
@@ -113,12 +119,14 @@ def mse_by_protocol(target_dict, estimates_dict):
 
     return loss
 
+
 def sterr(mat):
     """
     standard error of the mean
     :param mat: A matrix of [n_samples, n_spikes]
     """
     return np.nanstd(mat, 0) / np.sqrt(np.count_nonzero(~np.isnan(mat), 0))
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -146,7 +154,7 @@ for key in stimulus_dict:
     # set zero values to nan
     target_dict[key][target_dict[key] == 0] = np.nan
 
-train_dict = { key: target_dict[key] for key in train_keys }
+train_dict = {key: target_dict[key] for key in train_keys}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -168,7 +176,7 @@ if fitting_tm:
     # Fit TM model to data
     tm_params, tm_sse, grid, sse_grid = fit_tm_model(
         stimulus_dict,
-        target_dict,
+        train_dict,
         tm_param_ranges,
         disp=True,  # display output
         workers=-1,  # split over all available CPU cores
@@ -210,18 +218,13 @@ if fitting_srp:
     srp_params, res = fit_srp_model(
         initial_guess,
         stimulus_dict,
-        target_dict,
+        train_dict,
         mu_kernel_taus,
         sigma_kernel_taus,
         mu_scale=None,
-        bounds=[
-            (-5, 5),
-            *[(-np.inf, np.inf)] * len(mu_kernel_taus),
-            (-5, 5),
-            *[(-np.inf, np.inf)] * len(sigma_kernel_taus),
-            (0.001, np.inf),
-        ],
+        bounds="default",
         algo="L-BFGS-B",
+        global_steps=True,
         options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
     )
 
@@ -254,20 +257,27 @@ srp_mse_train = mse_by_protocol(target_dict, srp_mean)
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+
 def plot_allfits():
 
     npanels = len(list(target_dict.keys()))
-    fig = MultiPanel(grid=[npanels, npanels], figsize = (npanels * 3, 6))
+    fig = MultiPanel(grid=[npanels, npanels], figsize=(npanels * 3, 6))
 
     # Plot mean fit
     for ix, key in enumerate(list(target_dict.keys())):
-        xax = np.arange(1, len(tm_est[key])+1)
+        xax = np.arange(1, len(tm_est[key]) + 1)
         standard_error = sterr(target_dict[key])
-        fig.panels[ix].errorbar(xax, np.nanmean(target_dict[key], 0),
-                                yerr=standard_error, color='black',
-                                marker='o', markersize=2, label='data')
-        fig.panels[ix].plot(xax, tm_est[key], color=color['tm'], label='TM model')
-        fig.panels[ix].plot(xax, srp_mean[key], color=color['srp'], label='SRP model')
+        fig.panels[ix].errorbar(
+            xax,
+            np.nanmean(target_dict[key], 0),
+            yerr=standard_error,
+            color="black",
+            marker="o",
+            markersize=2,
+            label="data",
+        )
+        fig.panels[ix].plot(xax, tm_est[key], color=color["tm"], label="TM model")
+        fig.panels[ix].plot(xax, srp_mean[key], color=color["srp"], label="SRP model")
         fig.panels[ix].set_title(protocol_names[key])
         fig.panels[ix].set_xticks(xax)
         fig.panels[ix].set_ylim(0.5, 9)
@@ -276,21 +286,30 @@ def plot_allfits():
     # Plot sigma fit
 
     for ix2, key in enumerate(list(target_dict.keys())):
-        xax = np.arange(1, len(tm_est[key])+1)
-        fig.panels[ix+1+ix2].plot(xax, np.nanstd(target_dict[key], 0),
-                                  color='black', marker='o', markersize=2, label='data')
-        fig.panels[ix+1+ix2].plot(xax, srp_sigma[key], color=color['srp'], label='SRP model')
-        fig.panels[ix+1+ix2].set_xticks(xax)
-        fig.panels[ix+1+ix2].set_xlabel('spike nr')
-        fig.panels[ix+1+ix2].set_ylim(0, 8)
-        fig.panels[ix+1+ix2].set_yticks([0, 2, 4, 6, 8])
+        xax = np.arange(1, len(tm_est[key]) + 1)
+        fig.panels[ix + 1 + ix2].plot(
+            xax,
+            np.nanstd(target_dict[key], 0),
+            color="black",
+            marker="o",
+            markersize=2,
+            label="data",
+        )
+        fig.panels[ix + 1 + ix2].plot(
+            xax, srp_sigma[key], color=color["srp"], label="SRP model"
+        )
+        fig.panels[ix + 1 + ix2].set_xticks(xax)
+        fig.panels[ix + 1 + ix2].set_xlabel("spike nr")
+        fig.panels[ix + 1 + ix2].set_ylim(0, 8)
+        fig.panels[ix + 1 + ix2].set_yticks([0, 2, 4, 6, 8])
 
-    fig.panels[ix+1].legend(frameon=False)
-    fig.panels[ix+1].set_ylabel(r'std. $\sigma$')
+    fig.panels[ix + 1].legend(frameon=False)
+    fig.panels[ix + 1].set_ylabel(r"std. $\sigma$")
     fig.panels[0].legend(frameon=False)
-    fig.panels[0].set_ylabel('norm. EPSC amplitude')
+    fig.panels[0].set_ylabel("norm. EPSC amplitude")
 
     plt.show()
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
