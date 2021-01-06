@@ -1,5 +1,5 @@
-from eTMmodel import cTMSynapse, gTMSynapse
-from LNLmodel import det_exp
+from srplasticity.tm import TsodyksMarkramModel, AdaptedTsodyksMarkramModel
+from srplasticity.srp import DetSRP, ExponentialKernel
 import numpy as np
 
 import matplotlib
@@ -8,7 +8,7 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import scipy.stats as stats
-from srplasticity.tools import get_stimvec
+from srplasticity._tools import get_stimvec
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -49,74 +49,53 @@ c_25ca = "#0077bb"
 
 c_params = ["#000000", "#BBBBBB"]
 
-# FITTED MODEL PARAMETERS
-# # # # # # # # # #
-
-g_MF_PN = gTMSynapse(
-    1,
-    U=np.array([0.207]),
-    f=np.array([0.545]),
-    tau_U=np.array([500]),
-    tau_R=np.array([50]),
-    Z=np.array([0.207]),
-    tau_Z=np.array([7.531]),
-    w=1 / (0.207 * 0.207),
-)
-
-c_MF_PN = cTMSynapse(
-    1,
-    U=np.array([0.02]),
-    f=np.array([0.02]),
-    tau_U=np.array([130]),
-    tau_R=np.array([50]),
-    w=1 / (0.02),
-)
-
 # PARAMETERS cTM EXAMPLE
 # # # # # # # # # # # # #
-syn_c_13 = cTMSynapse(
-    1, U=np.array([0.05]), f=np.array([0.2]), tau_U=np.array([50]), tau_R=np.array([10])
+
+cTM_13 = TsodyksMarkramModel(
+    U=np.array([0.05]),
+    f=np.array([0.2]),
+    tau_u=np.array([50]),
+    tau_r=np.array([10]),
 )
-syn_c_25 = cTMSynapse(
-    1, U=np.array([0.25]), f=np.array([0.2]), tau_U=np.array([50]), tau_R=np.array([10])
+
+cTM_25 = TsodyksMarkramModel(
+    U=np.array([0.25]),
+    f=np.array([0.2]),
+    tau_u=np.array([50]),
+    tau_r=np.array([10]),
 )
 
 # PARAMETERS gTM EXAMPLE
 # # # # # # # # # # # # #
-syn_g_13 = gTMSynapse(
-    1,
+
+aTM_13 = AdaptedTsodyksMarkramModel(
     U=np.array([0.05]),
     f=np.array([1]),
-    tau_U=np.array([50]),
-    tau_R=np.array([10]),
-    Z=np.array([1]),
-    tau_Z=np.array([1]),
+    tau_u=np.array([50]),
+    tau_r=np.array([10]),
 )
 
-syn_g_25 = gTMSynapse(
-    1,
+aTM_25 = AdaptedTsodyksMarkramModel(
     U=np.array([0.25]),
     f=np.array([1]),
-    tau_U=np.array([50]),
-    tau_R=np.array([10]),
-    Z=np.array([1]),
-    tau_Z=np.array([1]),
+    tau_u=np.array([50]),
+    tau_r=np.array([10]),
 )
 
 # PARAMETERS LNL EXAMPLE
 # # # # # # # # # # # # #
 
-syn_lnl_25 = det_exp(a=600, tau=500, b=-1.5, T=None)
-
-syn_lnl_13 = det_exp(a=600, tau=500, b=-5.5, T=None)
-
+srp_13ca = DetSRP(ExponentialKernel(500, 600), -5.5, 1)
+srp_25ca = DetSRP(ExponentialKernel(500, 600), -1.5, 1)
 
 # EXAMPLE SPIKES
 # # # # # # # # # # # # #
 dt = 0.1
 nrspikes = 5
 isi = 20
-examplespikes = np.array([get_stimvec([isi] * nrspikes, dt=dt, null=5, extra=30)])
+isivec = [isi] * nrspikes
+examplespikes = get_stimvec([isi] * nrspikes, dt=dt, null=5, extra=30)
 
 
 def plot():

@@ -185,9 +185,7 @@ def exponential_kernels(taus, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
 
-        kernels[i,] += (
-            1 / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += 1 / tau * np.exp(-t / tau)
 
     return kernels
 
@@ -223,9 +221,7 @@ def exponential_kernel_weighted(taus, amps, T, dt=0.1):
         tau = taus[i]
         a = amps[i]
 
-        kernels[i,] += (
-            a / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += a / tau * np.exp(-t / tau)
 
     return kernels.sum(0)
 
@@ -365,13 +361,7 @@ if __name__ == "__main__":
     # INDEPENDENTLY
     filtered_S = np.zeros(spktr.shape)
     for i in range(len(exps)):
-        filtered_S += amps[i] * lfilter(
-            exps[
-                i,
-            ],
-            1,
-            spktr,
-        )
+        filtered_S += amps[i] * lfilter(exps[i,], 1, spktr,)
     filtered_S += b
     filtered_S = np.roll(filtered_S, 1)
     test_indep = sigmoid(filtered_S)

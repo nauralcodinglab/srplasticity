@@ -61,9 +61,7 @@ def exponential_kernel_weighted(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += (
-            a / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += a / tau * np.exp(-t / tau)
     return kernels.sum(0)
 
 
@@ -84,9 +82,7 @@ def exponential_kernel_weighted_nosum(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += (
-            a / tau * np.exp(-t / tau)
-        )
+        kernels[i,] += a / tau * np.exp(-t / tau)
     return kernels
 
 
@@ -115,6 +111,8 @@ def negloglikelihood_II(init_params, Y, taus, spktrain, Nstim, inds):
     tp5, tp6 = zeros((len(a_mu) - 1, Nstim)), zeros((len(a_sig) - 1, Nstim))
     tp7, tp8 = zeros((len(a_mu) - 1, Nstim)), zeros((len(a_sig) - 1, Nstim))
     tp9, tp10 = zeros((len(a_mu) - 1, Nstim)), zeros((len(a_sig) - 1, Nstim))
+
+    # Convolve each kernel with spiketrain
     for i in range(K.shape[0]):
         filtered_S[i,], filtered_S2[i,] = (
             lfilter(K[i], 1, spktrain[0]) + a_mu[0],
@@ -177,6 +175,8 @@ def negloglikelihood_II(init_params, Y, taus, spktrain, Nstim, inds):
             array([filtered_S9[i][where(spktrain[4])[0]]]),
             array([filtered_S10[i][where(spktrain[4])[0]]]),
         )
+
+    # Add a vector of ones for basis function
     tp, tp2 = vstack([tp, ones(Nstim)]), vstack([tp2, ones(Nstim)])
     tp3, tp4 = vstack([tp3, ones(Nstim)]), vstack([tp4, ones(Nstim)])
     tp5, tp6 = vstack([tp5, ones(Nstim)]), vstack([tp6, ones(Nstim)])
