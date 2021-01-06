@@ -29,7 +29,7 @@ fitting_srp = True
 
 # Test data
 test_keys = ["invivo"]
-train_keys = ["100", "20", "20100", "10100", "10020"]
+train_keys = ["100", "20", "20100", "10100", "10020", "111"]
 
 # Paths
 current_dir = Path(
@@ -88,10 +88,16 @@ def get_model_estimates(model, stimulus_dict):
             )
         return means, sigmas, estimates
 
-    else:
+    elif isinstance(model, TsodyksMarkramModel):
         for key, isivec in stimulus_dict.items():
             estimates[key] = model.run_ISIvec(isivec)
             model.reset()
+
+        return estimates
+
+    else:
+        for key, isivec in stimulus_dict.items():
+            estimates[key] = model.run_ISIvec(isivec)
 
         return estimates
 
@@ -103,8 +109,7 @@ def mse(targets, estimate):
     :return: mean squared errors
     """
     return np.nansum(
-        ((targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets), 0)
-    )
+        (targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets))
 
 
 def mse_by_protocol(target_dict, estimates_dict):
@@ -204,15 +209,7 @@ if fitting_srp:
     mu_kernel_taus = [15, 100, 650]
     sigma_kernel_taus = [15, 100, 650]
 
-    # Parameter ranges
-    # srp_param_ranges = (
-    #    slice(0.001, 0.0105, 0.0005),  # U
-    #    slice(0.001, 0.0105, 0.0005),  # f
-    #    slice(1, 501, 10),  # tau_u
-    #    slice(1, 501, 10),  # tau_r
-    # )
-
-    initial_guess = [0, *mu_kernel_taus, 0, *sigma_kernel_taus, 1]
+    initial_guess = [-2, *mu_kernel_taus, -2, *sigma_kernel_taus, 4]
 
     # Fit SRP model to data
     srp_params, res = fit_srp_model(
@@ -224,7 +221,6 @@ if fitting_srp:
         mu_scale=None,
         bounds="default",
         algo="L-BFGS-B",
-        global_steps=True,
         options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
     )
 
@@ -248,8 +244,8 @@ tm_est = get_model_estimates(TsodyksMarkramModel(*tm_params), stimulus_dict)
 srp_mean, srp_sigma, srp_est = get_model_estimates(ExpSRP(*srp_params), stimulus_dict)
 
 # Calculate MSE
-tm_mse_train = mse_by_protocol(target_dict, tm_est)
-srp_mse_train = mse_by_protocol(target_dict, srp_mean)
+tm_mse = mse_by_protocol(target_dict, tm_est)
+srp_mse = mse_by_protocol(target_dict, srp_mean)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -318,5 +314,6 @@ def plot_allfits():
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if __name__ == "__main__":
+    from srplasticity.srp import DetSRP, ExponentialKernel
 
     plot_allfits()

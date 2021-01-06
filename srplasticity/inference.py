@@ -4,11 +4,12 @@ inference.py
 Everything related to parameter inference and fitting the model to data
 """
 
-from srplasticity.srp import ExpSRP
 import numpy as np
 from scipy.special import gamma  # gamma function
-from scipy.optimize import minimize, basinhopping
+from scipy.optimize import minimize
 from scipy._lib._util import MapWrapper
+from srplasticity.srp import ExpSRP
+from srplasticity._tools import MinimizeWrapper
 
 # Multiprocessing
 import copyreg
@@ -32,12 +33,11 @@ def _nll(y, mu, sigma):
 
     return np.nansum(
         (
-            y * (mu / sigma ** 2)
-            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / sigma ** 2))
-            + np.log(gamma(mu ** 2 / sigma ** 2))
-            + np.log(sigma ** 2 / mu)
+                (y * mu) / (sigma ** 2)
+                - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2)))
+                + np.log(gamma(mu ** 2 / sigma ** 2))
+                + np.log(sigma ** 2 / mu)
         )
-        / np.count_nonzero(~np.isnan(y), 0)
     )
 
 
@@ -123,30 +123,12 @@ def _default_parameter_bounds(n_mu_taus, n_sigma_taus):
     ]
 
 
-class _Minimize_Wrapper(object):
-    """
-    Object to wrap scipy optimize.minimize function for grid search
-
-    :param func: objective function to call the minimizer on
-    :param args: arguments for objective function
-    :param kwargs: other keyword arguments for minimizer
-    """
-
-    def __init__(self, func, args, **kwargs):
-        self.minimizer = minimize
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
-
-    def __call__(self, x):
-        return self.minimizer(self.func, x0=x, args=self.args, **self.kwargs)
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # INITIALIZATION
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def _get_grid(ranges, Ns=3):
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
@@ -229,11 +211,13 @@ class Grid(object):
         self.nstart += 1
         return newx
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # MAKE THINGS PICKLEABLE FOR MULTIPROCESSING
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def _pickle_method(method):
     func_name = method.im_func.__name__
@@ -270,6 +254,7 @@ def fit_srp_model_gridsearch(
     sigma_taus,
     mu_scale=None,
     bounds="default",
+    method="L-BFGS-B",
     workers=1,
     **kwargs
 ):
@@ -282,10 +267,13 @@ def fit_srp_model_gridsearch(
         bounds = _default_parameter_bounds(len(mu_taus), len(sigma_taus))
 
     # 2. INITIALIZE WRAPPED MINIMIZER FUNCTION
-    wrapped_minimizer = _Minimize_Wrapper(_objective_function,
-                                          args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale),
-                                          bounds=bounds,
-                                          **kwargs)
+    wrapped_minimizer = MinimizeWrapper(
+        _objective_function,
+        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale),
+        bounds=bounds,
+        method=method,
+        **kwargs
+    )
 
     # 3. MAKE GRID
     N = len(param_ranges)
@@ -297,31 +285,10 @@ def fit_srp_model_gridsearch(
     # iterate over input arrays, possibly in parallel
     with MapWrapper(pool=workers) as mapper:
         Jout = np.array(list(mapper(wrapped_minimizer, grid)))
-        if N == 1:
-            grid = (grid,)
-            Jout = np.squeeze(Jout)
-        elif N > 1:
-            Jout = np.reshape(Jout, inpt_shape[1:])
-            grid = np.reshape(grid.T, inpt_shape)
 
-    Nshape = np.shape(Jout)
+    fitted_params = [res['x'] for res in Jout]
 
-    indx = np.argmin(Jout.ravel(), axis=-1)
-    Nindx = np.zeros(N, int)
-    xmin = np.zeros(N, float)
-    for k in range(N - 1, -1, -1):
-        thisN = Nshape[k]
-        Nindx[k] = indx % Nshape[k]
-        indx = indx // thisN
-    for k in range(N):
-        xmin[k] = grid[k][tuple(Nindx)]
-
-    Jmin = Jout[tuple(Nindx)]
-    if (N == 1):
-        grid = grid[0]
-        xmin = xmin[0]
-
-
+    return Jout
 
 
 def fit_srp_model(

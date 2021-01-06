@@ -1,11 +1,12 @@
 """
-tools.py Module
+_tools.py Module
 
 This module contains tools and helper functions that are used by other modules
 or that are useful for implementations
 """
 
 import numpy as np
+from scipy.optimize import minimize
 
 
 def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
@@ -23,7 +24,7 @@ def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
     )
     # ISI times accounting for base zero-indexing
 
-    return np.array(
+    spktr = np.array(
         [0] * int(null / dt)
         + [
             1 if i in ISIindex.astype(int) else 0
@@ -31,6 +32,8 @@ def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
         ]
     ).astype(bool)
 
+    # Remove redundant dimension
+    return spktr
 
 def get_ISIvec(freq, nstim):
     """
@@ -40,3 +43,29 @@ def get_ISIvec(freq, nstim):
     :return: ISI vector in ms
     """
     return [0] + list(np.array([1000 / freq]).astype(int)) * (nstim - 1)
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# MULTIPROCESSING
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+class MinimizeWrapper(object):
+    """
+    Object to wrap scipy optimize.minimize function for grid search
+
+    :param func: objective function to call the minimizer on
+    :param args: arguments for objective function
+    :param kwargs: other keyword arguments for minimizer
+    """
+
+    def __init__(self, func, args, **kwargs):
+        self.minimizer = minimize
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self, x):
+        return self.minimizer(self.func, x0=x, args=self.args, **self.kwargs)

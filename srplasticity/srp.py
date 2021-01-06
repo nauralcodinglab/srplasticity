@@ -10,7 +10,7 @@ This module contains classes for the implementation of the SRP model.
 from abc import ABC, abstractmethod
 import numpy as np
 from scipy.signal import lfilter
-from .tools import get_stimvec
+from srplasticity._tools import get_stimvec
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -211,8 +211,8 @@ class DetSRP:
         filtered_spiketrain = self.mu_baseline + _convolve_spiketrain_with_kernel(
             spiketrain, self.mu_kernel
         )
-        nonlinear_readout = self.nlin(filtered_spiketrain)
-        efficacytrain = self.mu_scale * nonlinear_readout * spiketrain
+        nonlinear_readout = self.nlin(filtered_spiketrain) * self.mu_scale
+        efficacytrain = nonlinear_readout * spiketrain
         efficacies = efficacytrain[np.where(spiketrain == 1)[0]]
 
         if return_all:
