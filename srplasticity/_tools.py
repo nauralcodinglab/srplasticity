@@ -35,6 +35,7 @@ def get_stimvec(ISIvec, dt=0.1, null=0, extra=10):
     # Remove redundant dimension
     return spktr
 
+
 def get_ISIvec(freq, nstim):
     """
     Returns an ISI vector of a periodic stimulation train (constant frequency)

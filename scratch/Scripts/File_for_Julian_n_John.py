@@ -61,7 +61,9 @@ def exponential_kernel_weighted(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += a / tau * np.exp(-t / tau)
+        kernels[i,] += (
+            a / tau * np.exp(-t / tau)
+        )
     return kernels.sum(0)
 
 
@@ -82,7 +84,9 @@ def exponential_kernel_weighted_nosum(taus, amps, T, dt=0.1):
     for i in range(n):
         tau = taus[i]
         a = amps[i]
-        kernels[i,] += a / tau * np.exp(-t / tau)
+        kernels[i,] += (
+            a / tau * np.exp(-t / tau)
+        )
     return kernels
 
 

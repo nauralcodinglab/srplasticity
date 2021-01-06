@@ -5,7 +5,7 @@ import os, inspect
 import numpy as np
 
 # Models
-from srplasticity.tm import fit_tm_model, TsodyksMarkramModel, _total_loss
+from srplasticity.tm import fit_tm_model, TsodyksMarkramModel
 from srplasticity.srp import ExpSRP
 from srplasticity.inference import fit_srp_model
 
@@ -25,7 +25,7 @@ matplotlib.style.use("spiffy")
 # Set to True to fit model parameters
 # Set to False to load fitted parameters from `scripts / modelfits`
 fitting_tm = False
-fitting_srp = True
+fitting_srp = False
 
 # Test data
 test_keys = ["invivo"]
@@ -108,8 +108,7 @@ def mse(targets, estimate):
     :param estimate: 1D np.array with estimated response amplitudes of shape [n_stimulus]
     :return: mean squared errors
     """
-    return np.nansum(
-        (targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets))
+    return np.nansum((targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets))
 
 
 def mse_by_protocol(target_dict, estimates_dict):

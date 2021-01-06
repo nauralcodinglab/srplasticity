@@ -33,10 +33,10 @@ def _nll(y, mu, sigma):
 
     return np.nansum(
         (
-                (y * mu) / (sigma ** 2)
-                - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2)))
-                + np.log(gamma(mu ** 2 / sigma ** 2))
-                + np.log(sigma ** 2 / mu)
+            (y * mu) / (sigma ** 2)
+            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2)))
+            + np.log(gamma(mu ** 2 / sigma ** 2))
+            + np.log(sigma ** 2 / mu)
         )
     )
 
@@ -121,6 +121,67 @@ def _default_parameter_bounds(n_mu_taus, n_sigma_taus):
         *[(-np.inf, np.inf)] * n_sigma_taus,  # sigma taus
         (0.001, np.inf),  # sigma scale
     ]
+
+
+def _default_parameter_ranges():
+    """
+    Default parameter ranges.
+    :return list of slice objects
+    """
+
+    return (
+        slice(-3, 3, 1),  # mu_baseline
+        slice(-2, 2, 0.5),  # taus
+    )
+
+
+def _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale=None):
+    """
+    Converts grid of parameter ranges into initializations
+    """
+    starts = []
+    nstarts, ndims = grid.shape
+
+    for i in range(nstarts):
+        params = grid[i]
+
+        if ndims == 2:
+            # two dimensions: mu_init equals sigma_init, fixed sigma scale
+            assert sigma_scale is not None, 'Need to supply sigma scale or more parameter ranges'
+
+            start = [
+                params[0],
+                *(params[1] * np.array(mu_taus)),
+                params[0],
+                *(params[1] * np.array(sigma_taus)),
+                sigma_scale,
+            ]
+
+        elif ndims == 3:
+            # three dimensions: also change sigma_scale
+            start = [
+                params[0],
+                *(params[1] * np.array(mu_taus)),
+                params[0],
+                *(params[1] * np.array(sigma_taus)),
+                params[2],
+            ]
+
+        elif ndims == 5:
+            # five dimensions: initializations for sigma independent
+            start = [
+                params[0],
+                *(params[1] * np.array(mu_taus)),
+                params[3],
+                *(params[4] * np.array(sigma_taus)),
+                params[2],
+            ]
+
+        else:
+            raise ValueError('supply either 2, 3 or 5 ranges of parameters')
+
+        starts.append(start)
+    return np.array(starts)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -249,15 +310,31 @@ copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 def fit_srp_model_gridsearch(
     stimulus_dict,
     target_dict,
-    param_ranges,
     mu_taus,
     sigma_taus,
+    param_ranges='default',
     mu_scale=None,
+    sigma_scale=1,
     bounds="default",
     method="L-BFGS-B",
     workers=1,
     **kwargs
 ):
+    """
+    Fitting the SRP model using a gridsearch.
+
+    :param stimulus_dict: dictionary of protocol key - isivec mapping
+    :param target_dict: dictionary of protocol key - target amplitudes
+    :param mu_taus: mu time constants
+    :param sigma_taus: sigma time constants
+    :param target_dict: dictionary of protocol key - target amplitudes
+    :param param_ranges: Optional - ranges of parameters in form of a tuple of slice objects
+    :param mu_scale: mu scale (defaults to None for normalized data)
+    :param sigma_scale: sigma scale in case param_ranges only covers 2 dimensions
+    :param bounds: bounds for parameters to be passed to minimizer function
+    :param method: algorithm for minimizer function
+    :param workers: number of processors
+    """
 
     # 1. SET PARAMETER BOUNDS
     mu_taus = np.atleast_1d(mu_taus)
@@ -276,17 +353,18 @@ def fit_srp_model_gridsearch(
     )
 
     # 3. MAKE GRID
-    N = len(param_ranges)
+    if param_ranges == 'default':
+        param_ranges = _default_parameter_ranges()
     grid = _get_grid(param_ranges)
-    inpt_shape = grid.shape
+    starts = _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale)
 
     # 4. RUN
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
     # iterate over input arrays, possibly in parallel
     with MapWrapper(pool=workers) as mapper:
-        Jout = np.array(list(mapper(wrapped_minimizer, grid)))
+        Jout = np.array(list(mapper(wrapped_minimizer, starts)))
 
-    fitted_params = [res['x'] for res in Jout]
+    fitted_params = [res["x"] for res in Jout]
 
     return Jout
 
