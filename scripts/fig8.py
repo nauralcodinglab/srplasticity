@@ -39,6 +39,8 @@ parent_dir = Path(os.path.dirname(current_dir))
 
 modelfit_dir = current_dir / "modelfits"
 data_dir = parent_dir / "data" / "processed" / "chamberland2018"
+figure_dir = current_dir / 'figures'
+supplement_dir = current_dir / 'supplements'
 
 # Plots
 plotted_testsets_ordered = ["20", '20100', 'invivo']
@@ -211,6 +213,13 @@ for key in stimulus_dict:
     )
     # set zero values to nan
     target_dict[key][target_dict[key] == 0] = np.nan
+
+# Noise correlation data
+noisecor_data = {}
+for key in stimulus_dict:
+    noisecor_data[key] = load_pickle(
+        Path(data_dir / 'noisecorrelations' / str(key + ".pkl"))
+    )
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -392,7 +401,30 @@ srp_kernels = ExponentialKernel(srp_params[1], srp_params[2])._all_exponentials
 # PLOTTING FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+def plot_allNoiseCorrelations():
+    """
+    Investigate all noise correlations
+    """
 
+    fig = MultiPanel(grid=[len(noisecor_data.keys())], figsize=(3*len(noisecor_data.keys()), 3))
+    panel = 0
+    for key in noisecor_data.keys():
+        paired = noisecor_data[key]
+
+        fig.panels[panel].hlines(
+            y=0, xmax=np.nanmax(paired[:, 0]), xmin=np.nanmin(paired[:, 0]), color="darkred"
+        )
+        fig.panels[panel].vlines(
+            x=0, ymax=np.nanmax(paired[:, 1]), ymin=np.nanmin(paired[:, 1]), color="darkred"
+        )
+        fig.panels[panel].scatter(paired[:, 0], paired[:, 1], s=2, c="black")
+        fig.panels[panel].set_xlabel(r"$\Delta x(s)$ (in SD)")
+        fig.panels[panel].set_ylabel(r"$\Delta x(s+1)$ (in SD)")
+
+        panel += 1
+
+    plt.savefig(supplement_dir / "Supp_Fig8_noisecorrelation_by_protocol.pdf" )
+    plt.show()
 
 def plot_allfits():
 
@@ -444,6 +476,7 @@ def plot_allfits():
     fig.panels[0].legend(frameon=False)
     fig.panels[0].set_ylabel("norm. EPSC amplitude")
 
+    plt.savefig(supplement_dir / "Supp_Fig8_all_model_fits.pdf" )
     plt.show()
 
 
@@ -557,5 +590,5 @@ if __name__ == "__main__":
 
     # Plot of fits to all protocols when both models were fit to the whole dataset
     plot_allfits()
-
+    plot_allNoiseCorrelations()
     plot_fig8()
