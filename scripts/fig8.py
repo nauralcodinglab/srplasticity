@@ -39,19 +39,20 @@ parent_dir = Path(os.path.dirname(current_dir))
 
 modelfit_dir = current_dir / "modelfits"
 data_dir = parent_dir / "data" / "processed" / "chamberland2018"
-figure_dir = current_dir / 'figures'
-supplement_dir = current_dir / 'supplements'
+figure_dir = current_dir / "figures"
+supplement_dir = current_dir / "supplements"
 
 # Plots
-plotted_testsets_ordered = ["20", '20100', 'invivo']
+plotted_testsets_ordered = ["20", "20100", "invivo"]
 
 matplotlib.rc("xtick", top=False)
 matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 plt.rc("font", size=8)
+plt.rc("text", usetex=True)
 
-figsize = (5.25102*1.3, 5.25102)  # From LaTeX readout of textwidth
+figsize = (5.25102 * 1.5, 5.25102 * 1.5)  # From LaTeX readout of textwidth
 
 color = {"tm": "blue", "srp": "darkred"}
 c_kernels = ("#525252", "#969696", "#cccccc")  # greyscale
@@ -81,12 +82,12 @@ short_names = {
 }
 
 
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # HELPER FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def add_figure_letters(axes, size=14):
     """
@@ -188,6 +189,165 @@ def get_train_dict(targets, test_key):
     return {key: targets[key] for key in protocol_names.keys() if key != test_key}
 
 
+def add_scalebar(
+        x_units=None,
+        y_units=None,
+        anchor=(0.98, 0.02),
+        x_size=None,
+        y_size=None,
+        y_label_space=0.02,
+        x_label_space=-0.02,
+        bar_space=0.06,
+        x_on_left=True,
+        linewidth=3,
+        remove_frame=True,
+        omit_x=False,
+        omit_y=False,
+        round=True,
+        usetex=True,
+        ax=None,
+):
+    """
+    Automagically add a set of x and y scalebars to a matplotlib plot
+    Inputs:
+        x_units: str or None
+        y_units: str or None
+        anchor: tuple of floats
+        --  bottom right of the bbox (in axis coordinates)
+        x_size: float or None
+        --  Manually set size of x scalebar (or None for automatic sizing)
+        y_size: float or None
+        --  Manually set size of y scalebar (or None for automatic sizing)
+        text_spacing: tuple of floats
+        --  amount to offset labels from respective scalebars (in axis units)
+        bar_space: float
+        --  amount to separate bars from eachother (in axis units)
+        linewidth: numeric
+        --  thickness of the scalebars
+        remove_frame: bool (default False)
+        --  remove the bounding box, axis ticks, etc.
+        omit_x/omit_y: bool (default False)
+        --  skip drawing the x/y scalebar
+        round: bool (default True)
+        --  round units to the nearest integer
+        ax: matplotlib.axes object
+        --  manually specify the axes object to which the scalebar should be added
+    """
+
+    # Basic input processing.
+
+    if ax is None:
+        ax = plt.gca()
+
+    if x_units is None:
+        x_units = ""
+    if y_units is None:
+        y_units = ""
+
+    # Do y scalebar.
+    if not omit_y:
+
+        if y_size is None:
+            y_span = ax.get_yticks()[:2]
+            y_length = y_span[1] - y_span[0]
+            y_span_ax = ax.transLimits.transform(np.array([[0, 0], y_span]).T)[:, 1]
+        else:
+            y_length = y_size
+            y_span_ax = ax.transLimits.transform(np.array([[0, 0], [0, y_size]]))[:, 1]
+        y_length_ax = y_span_ax[1] - y_span_ax[0]
+
+        if round:
+            y_length = int(np.round(y_length))
+
+        # y-scalebar label
+
+        if y_label_space <= 0:
+            horizontalalignment = "left"
+        else:
+            horizontalalignment = "right"
+
+        if usetex:
+            y_label_text = "${}${}".format(y_length, y_units)
+        else:
+            y_label_text = "{}{}".format(y_length, y_units)
+
+        ax.text(
+            anchor[0] - y_label_space,
+            anchor[1] + y_length_ax / 2 + bar_space,
+            y_label_text,
+            verticalalignment="center",
+            horizontalalignment=horizontalalignment,
+            size="small",
+            transform=ax.transAxes,
+        )
+
+        # y scalebar
+        ax.plot(
+            [anchor[0], anchor[0]],
+            [anchor[1] + bar_space, anchor[1] + y_length_ax + bar_space],
+            "k-",
+            linewidth=linewidth,
+            clip_on=False,
+            transform=ax.transAxes,
+        )
+
+    # Do x scalebar.
+    if not omit_x:
+
+        if x_size is None:
+            x_span = ax.get_xticks()[:2]
+            x_length = x_span[1] - x_span[0]
+            x_span_ax = ax.transLimits.transform(np.array([x_span, [0, 0]]).T)[:, 0]
+        else:
+            x_length = x_size
+            x_span_ax = ax.transLimits.transform(np.array([[0, 0], [x_size, 0]]))[:, 0]
+        x_length_ax = x_span_ax[1] - x_span_ax[0]
+
+        if round:
+            x_length = int(np.round(x_length))
+
+        # x-scalebar label
+        if x_label_space <= 0:
+            verticalalignment = "top"
+        else:
+            verticalalignment = "bottom"
+
+        if x_on_left:
+            Xx_text_coord = anchor[0] - x_length_ax / 2 - bar_space
+            Xx_bar_coords = [anchor[0] - x_length_ax - bar_space, anchor[0] - bar_space]
+        else:
+            Xx_text_coord = anchor[0] + x_length_ax / 2 + bar_space
+            Xx_bar_coords = [anchor[0] + x_length_ax + bar_space, anchor[0] + bar_space]
+
+        if usetex:
+            x_label_text = "${}${}".format(x_length, x_units)
+        else:
+            x_label_text = "{}{}".format(x_length, x_units)
+
+        ax.text(
+            Xx_text_coord,
+            anchor[1] + x_label_space,
+            x_label_text,
+            verticalalignment=verticalalignment,
+            horizontalalignment="center",
+            size="small",
+            transform=ax.transAxes,
+        )
+
+        # x scalebar
+        ax.plot(
+            Xx_bar_coords,
+            [anchor[1], anchor[1]],
+            "k-",
+            linewidth=linewidth,
+            clip_on=False,
+            transform=ax.transAxes,
+        )
+
+    if remove_frame:
+        ax.axis("off")
+
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # LOADING DATA FROM CHAMBERLAND ET AL. (2018)
@@ -218,7 +378,12 @@ for key in stimulus_dict:
 noisecor_data = {}
 for key in stimulus_dict:
     noisecor_data[key] = load_pickle(
-        Path(data_dir / 'noisecorrelations' / str(key + ".pkl"))
+        Path(data_dir / "noisecorrelations" / str(key + ".pkl"))
+    )
+
+# example trace
+example_trace = load_pickle(
+        Path(data_dir / 'example_trace.pkl')
     )
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -393,7 +558,8 @@ for testkey in test_keys:
     srp_test["testmse"] += srp_test["msenorm"][testkey]
 
 # Stuff for plotting
-srp_kernels = ExponentialKernel(srp_params[1], srp_params[2])._all_exponentials
+srp_kernels = ExponentialKernel(srp_params[2], srp_params[1])._all_exponentials
+srp_sigma_kernels = ExponentialKernel(srp_params[5], srp_params[4])._all_exponentials
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -406,25 +572,29 @@ def plot_allNoiseCorrelations():
     Investigate all noise correlations
     """
 
-    fig = MultiPanel(grid=[len(noisecor_data.keys())], figsize=(3*len(noisecor_data.keys()), 3))
+    fig = MultiPanel(
+        grid=[len(noisecor_data.keys())], figsize=(3 * len(noisecor_data.keys()), 3)
+    )
     panel = 0
     for key in noisecor_data.keys():
         paired = noisecor_data[key]
 
-        fig.panels[panel].hlines(
-            y=0, xmax=np.nanmax(paired[:, 0]), xmin=np.nanmin(paired[:, 0]), color="darkred"
-        )
-        fig.panels[panel].vlines(
-            x=0, ymax=np.nanmax(paired[:, 1]), ymin=np.nanmin(paired[:, 1]), color="darkred"
-        )
+        fig.panels[panel].hlines(y=0, xmax=4, xmin=-4, color="darkred")
+        fig.panels[panel].vlines(x=0, ymax=4, ymin=-4, color="darkred")
         fig.panels[panel].scatter(paired[:, 0], paired[:, 1], s=2, c="black")
         fig.panels[panel].set_xlabel(r"$\Delta x(s)$ (in SD)")
         fig.panels[panel].set_ylabel(r"$\Delta x(s+1)$ (in SD)")
-
+        fig.panels[panel].set_ylim(-4, 4)
+        fig.panels[panel].set_xlim(-4, 4)
+        fig.panels[panel].set_xticks([-4, -2, 0, 2, 4])
+        fig.panels[panel].set_yticks([-4, -2, 0, 2, 4])
+        fig.panels[panel].set_title(protocol_names[key])
         panel += 1
 
-    plt.savefig(supplement_dir / "Supp_Fig8_noisecorrelation_by_protocol.pdf" )
+    plt.tight_layout()
+    plt.savefig(supplement_dir / "Supp_Fig8_noisecorrelation_by_protocol.pdf")
     plt.show()
+
 
 def plot_allfits():
 
@@ -442,7 +612,7 @@ def plot_allfits():
             color="black",
             marker="o",
             markersize=2,
-            label="data",
+            label="Data",
         )
         fig.panels[ix].plot(xax, tm_est[key], color=color["tm"], label="TM model")
         fig.panels[ix].plot(xax, srp_mean[key], color=color["srp"], label="SRP model")
@@ -476,22 +646,56 @@ def plot_allfits():
     fig.panels[0].legend(frameon=False)
     fig.panels[0].set_ylabel("norm. EPSC amplitude")
 
-    plt.savefig(supplement_dir / "Supp_Fig8_all_model_fits.pdf" )
+    plt.savefig(supplement_dir / "Supp_Fig8_all_model_fits.pdf")
     plt.show()
 
 
 def plot_kernel(axis):
-    t_max = 200  # in ms
+    t_max = 1000  # in ms
+    t_inset = 1000
     x_ax = np.arange(0, t_max, 0.1)
+    inset_x_ax = np.arange(0, t_inset, 0.1)
 
-    for ix, kernel in enumerate(srp_kernels[:, :t_max*10]):
-        kernel[-1] = 0
-        axis.fill_between(x_ax, 0, np.roll(kernel,1), facecolor=c_kernels[ix], alpha=0.6, zorder=3-ix)
+    inset_ax = axis.inset_axes([0.5, 0.5, 0.45, 0.45])
 
-    sum = np.sum(srp_kernels, 0)[:t_max*10]
-    axis.plot(x_ax, sum, c="black", lw=lw, ls="dashed")
+    flipped = np.flip(srp_kernels, 0)
+    flipped_sigma = np.flip(srp_sigma_kernels, 0)
+    for ix, kernel in enumerate(srp_kernels):
+        label = str(srp_params[2][2-ix])
+        axis.fill_between(
+            x_ax,
+            0,
+            np.cumsum(flipped[:, : t_max * 10], 0)[ix],
+            facecolor=c_kernels[2 - ix],
+            alpha=1,
+            zorder=3 - ix,
+            label=label,
+        )
+        inset_ax.fill_between(
+            inset_x_ax,
+            0,
+            np.cumsum(flipped_sigma[:, : t_inset * 10], 0)[ix],
+            facecolor=c_kernels[2 - ix],
+            alpha=1,
+            zorder=3 - ix,
+        )
 
-    axis.axis('off')
+    sum = np.sum(srp_kernels, 0)
+    sum_sigma = np.sum(srp_sigma_kernels, 0)
+    axis.plot(x_ax, sum[: t_max * 10], c="black", lw=lw)
+    inset_ax.plot(inset_x_ax, sum_sigma[: t_inset * 10], c="black", lw=lw)
+
+    # Inset with first 100 ms
+    axis.set_xlabel("t (ms)")
+    axis.set_xticks([0, t_max])
+    axis.set_yticks([0, 1])
+    inset_ax.set_xlabel("t(ms)")
+    inset_ax.set_xticks([0, t_inset])
+    inset_ax.set_yticks([0, 1])
+
+    axis.legend(frameon=False)
+
+    # axis.axis('off')
 
 
 def plot_comparative_fits(axes):
@@ -502,53 +706,123 @@ def plot_comparative_fits(axes):
     for ax in axes:
         ax.set_ylim(0.5, 9)
         ax.set_yticks([1, 3, 5, 7, 9])
-        ax.set_xlabel('spike nr.')
+        ax.set_xlabel("spike nr.")
 
-    axes[0].set_ylabel('norm. EPSC')
+    axes[0].set_ylabel("norm. EPSC")
 
     for ix, testkey in enumerate(plotted_testsets_ordered):
-        #xax = np.arange(1, len(tm_est[testkey]) + 1)
+        # xax = np.arange(1, len(tm_est[testkey]) + 1)
         xax = np.arange(1, 7)
         standard_error = sterr(target_dict[testkey])
         axes[ix].errorbar(
             xax,
-            np.nanmean(target_dict[testkey][:,:6], 0),
+            np.nanmean(target_dict[testkey][:, :6], 0),
             yerr=standard_error[:6],
             color="black",
-            label="data",
+            label="Data",
             capsize=capsize,
             marker="s",
             lw=lw,
             elinewidth=lw * 0.7,
-            markersize=markersize
+            markersize=markersize,
         )
 
-        axes[ix].plot(xax, tm_test['est'][testkey][testkey][:6], color=color["tm"], label="TM model")
-        axes[ix].plot(xax, srp_test['mean'][testkey][testkey][:6], color=color["srp"], label="SRP model")
+        axes[ix].plot(
+            xax,
+            tm_test["est"][testkey][testkey][:6],
+            color=color["tm"],
+            label="TM model",
+        )
+        axes[ix].plot(
+            xax,
+            srp_test["mean"][testkey][testkey][:6],
+            color=color["srp"],
+            label="SRP model",
+        )
         axes[ix].set_xticks(xax[::2])
-        #axes[ix].set_title(protocol_names[testkey])
+        # axes[ix].set_title(protocol_names[testkey])
 
         if ix > 0:
             axes[ix].set_yticklabels([])
     axes[0].legend(frameon=False)
 
 
+def plot_protocols_data(axis):
+
+    datamean = np.nanmean(target_dict['100'],0)[:6]
+    axis.plot(target_dict['100'].mean())
+
+
 def plot_mse(axis):
 
     # Make data for barplot
-    labels = np.array(['TM model', 'SRP model'])
-    height = np.array([tm_test['testmse']/7, srp_test['testmse']/7])
+    labels = np.array(["TM model", "SRP model"])
+    height = np.array([tm_test["testmse"] / 7, srp_test["testmse"] / 7])
 
     x = np.arange(2)  # the label locations
 
-    axis.bar(x[0], height[0], color=color['tm'])
-    axis.bar(x[1], height[1], color=color['srp'])
+    axis.bar(x[0], height[0], color=color["tm"])
+    axis.bar(x[1], height[1], color=color["srp"])
 
     axis.set_ylim(1, 1.1)
     axis.set_yticks([1, 1.1])
-    axis.set_ylabel('test MSE (norm.)')
+    axis.set_ylabel("test MSE (norm.)")
     axis.set_xticks(x)
     axis.set_xticklabels(labels)
+
+
+def plot_noisecor(axis):
+    stackdata = np.vstack([pair for pair in noisecor_data.values()])
+
+    axis.hlines(y=0, xmax=4, xmin=-4, color="darkred")
+    axis.vlines(x=0, ymax=4, ymin=-4, color="darkred")
+    axis.scatter(stackdata[:, 0], stackdata[:, 1], s=0.5, c="black")
+    axis.set_xlabel(r"$S_j$ amplitude deviation (std)")
+    axis.set_ylabel(r"$S_{j+1}$ amplitude deviation (std)")
+    axis.set_ylim(-4, 4)
+    axis.set_xlim(-4, 4)
+    axis.set_xticks([-4, -2, 0, 2, 4])
+    axis.set_yticks([-4, -2, 0, 2, 4])
+
+
+def plot_std(axis):
+
+    axis.plot(np.nanstd(target_dict['20'], 0), color='black', ls='dashed', marker='o', label = '20 Hz')
+    axis.plot(np.nanstd(target_dict['100'], 0), color='black', marker='s', label ='100 Hz')
+
+    axis.plot(srp_sigma['20'], color=color['srp'], ls='dashed')
+    axis.plot(srp_sigma['100'], color=color['srp'])
+
+    axis.set_ylabel(r'sdt. deviation $\sigma$')
+    axis.set_xlabel('nr. spike')
+
+    axis.legend(frameon=False)
+
+
+def plot_traces(axis):
+
+    x_ax = np.arange(0, len(example_trace) * 0.1 , 0.1)
+    axis.plot(x_ax, example_trace, lw=0.5, color='lightgrey')
+    axis.plot(x_ax, example_trace.mean(1), lw=0.5, color='black')
+    axis.set_ylim(-2000, 2500)
+    add_scalebar(
+        x_units="ms",
+        y_units="pA",
+        anchor=(0.05, 0.05),
+        x_size=None,
+        y_size=500,
+        y_label_space=0.02,
+        x_label_space=-0.1,
+        bar_space=0,
+        x_on_left=False,
+        linewidth=0.5,
+        remove_frame=True,
+        omit_x=False,
+        omit_y=False,
+        round=True,
+        usetex=True,
+        ax=axis)
+
 
 def plot_fig8():
     """
@@ -557,26 +831,26 @@ def plot_fig8():
     axes_with_letter = [0, 1, 2, 3, 4, 5, 6, 9]
     fig = MultiPanel(grid=[3, 3, 4], figsize=figsize)
 
-    fig.panels[0].axis('off')
-    #plot_traces(data, fig.panels[1])
-    #plot_noisecor(fig.panels[2])
+    plot_traces(fig.panels[0])
+    plot_noisecor(fig.panels[2])
 
     # SRP Model fit
     plot_kernel(fig.panels[3])
-    #plot_traces(model, fig.panels[4])
-    #plot_sigmafit(fig.panels[5])
+    # plot_traces(model, fig.panels[4)
+    plot_std(fig.panels[5])
 
     # SRP / TM model fits
     plot_comparative_fits([fig.panels[ix] for ix in np.arange(6, 9)])
 
     # MSE
     plot_mse(fig.panels[9])
-    #plot_totalmse(fig.panels[10)
+    # plot_totalmse(fig.panels[10)
 
     add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 12)
     plt.tight_layout()
-    plt.show()
 
+    plt.savefig(figure_dir / "Fig8.pdf")
+    plt.show()
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -589,6 +863,6 @@ if __name__ == "__main__":
     from srplasticity.srp import DetSRP, ExponentialKernel
 
     # Plot of fits to all protocols when both models were fit to the whole dataset
-    plot_allfits()
-    plot_allNoiseCorrelations()
+    #plot_allfits()
+    #plot_allNoiseCorrelations()
     plot_fig8()
