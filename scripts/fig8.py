@@ -7,7 +7,7 @@ import numpy as np
 # Models
 from srplasticity.tm import fit_tm_model, TsodyksMarkramModel
 from srplasticity.srp import ExpSRP
-from srplasticity.inference import fit_srp_model
+from srplasticity.inference import fit_srp_model, fit_srp_model_gridsearch
 
 # Plotting
 from spiffyplots import MultiPanel
@@ -25,11 +25,10 @@ matplotlib.style.use("spiffy")
 # Set to True to fit model parameters
 # Set to False to load fitted parameters from `scripts / modelfits`
 fitting_tm = False
-fitting_srp = False
+fitting_srp = True
 
-# Test data
-test_keys = ["invivo"]
-train_keys = ["100", "20", "20100", "10100", "10020", "111"]
+# Total of 4 test sets (with 4 independent fits)
+test_keys = ["invivo", "100", "20", "20100"]
 
 # Paths
 current_dir = Path(
@@ -132,6 +131,13 @@ def sterr(mat):
     return np.nanstd(mat, 0) / np.sqrt(np.count_nonzero(~np.isnan(mat), 0))
 
 
+def get_train_dict(targets, test_key):
+    """
+    Get training dictionary based on the test key
+    """
+
+    return {key: targets[key] for key in protocol_names.keys() if key != test_key}
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # LOADING DATA FROM CHAMBERLAND ET AL. (2018)
@@ -158,8 +164,6 @@ for key in stimulus_dict:
     # set zero values to nan
     target_dict[key][target_dict[key] == 0] = np.nan
 
-train_dict = {key: target_dict[key] for key in train_keys}
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # FITTING TM MODEL
@@ -177,10 +181,11 @@ if fitting_tm:
         slice(1, 501, 10),  # tau_r
     )
 
-    # Fit TM model to data
+    # Step 1: Fitting to whole dataset
+    print("Fitting TM model to all protocols...")
     tm_params, tm_sse, grid, sse_grid = fit_tm_model(
         stimulus_dict,
-        train_dict,
+        target_dict,
         tm_param_ranges,
         disp=True,  # display output
         workers=-1,  # split over all available CPU cores
@@ -190,10 +195,28 @@ if fitting_tm:
     # Save fitted TM model parameters
     save_pickle(tm_params, modelfit_dir / "chamberland2018_TMmodel.pkl")
 
+    # Step 2: Holding out test sets defined in test_keys one at a time
+    tm_testparams = {}
+    for testkey in test_keys:
+        print("Holding out {} Hz data".format(testkey))
+
+        tm_testparams[testkey], _, _, _ = fit_tm_model(
+            stimulus_dict,
+            get_train_dict(target_dict, testkey),
+            tm_param_ranges,
+            disp=True,  # display output
+            workers=-1,  # split over all available CPU cores
+            full_output=True,  # save function value at each grid node
+        )
+        print('FITTED PARAMETERS:')
+        print(tm_testparams[testkey])
+
+    save_pickle(tm_testparams, modelfit_dir / "chamberland2018_TMmodel_validation.pkl")
 
 else:
     print("Loading fitted TM model parameters...")
     tm_params = load_pickle(modelfit_dir / "chamberland2018_TMmodel.pkl")
+    tm_testparams = load_pickle(modelfit_dir / "chamberland2018_TMmodel_validation.pkl")
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -208,29 +231,63 @@ if fitting_srp:
     mu_kernel_taus = [15, 100, 650]
     sigma_kernel_taus = [15, 100, 650]
 
-    initial_guess = [-2, *mu_kernel_taus, -2, *sigma_kernel_taus, 4]
+    # Initial guess for sigma scale
+    sigma_scale = 4
 
-    # Fit SRP model to data
-    srp_params, res = fit_srp_model(
-        initial_guess,
-        stimulus_dict,
-        train_dict,
-        mu_kernel_taus,
-        sigma_kernel_taus,
-        mu_scale=None,
-        bounds="default",
-        algo="L-BFGS-B",
-        options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+    # Parameter ranges for grid search. Total of 128 initial starts
+    srp_param_ranges = (
+        slice(-3, 1, 0.5),  # both baselines
+        slice(-2, 2, 0.25),  # all amplitudes (weighted by tau in fitting procedure)
     )
 
-    print(res)
+    # Step 1: Fitting to whole dataset
+    print("Fitting SRP model to all protocols...")
+    srp_params, bestfit, _starts, _fvals, _allsols = fit_srp_model_gridsearch(
+        stimulus_dict,
+        target_dict,
+        mu_kernel_taus,
+        sigma_kernel_taus,
+        param_ranges=srp_param_ranges,
+        mu_scale=None,
+        sigma_scale=4,
+        bounds="default",
+        method="L-BFGS-B",
+        workers=-1,
+        options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+    )
+    print('BEST SOLUTION:')
+    print(bestfit)
 
-    # Save fitted TM model parameters
+    # Save fitted SRP model parameters
     save_pickle(srp_params, modelfit_dir / "chamberland2018_SRPmodel.pkl")
+
+    # Step 2: Holding out test sets defined in test_keys one at a time
+    srp_testparams = {}
+    for testkey in test_keys:
+        print("Holding out {} Hz data".format(testkey))
+
+        srp_testparams[testkey], _bestfit, _, _, _ = fit_srp_model_gridsearch(
+            stimulus_dict,
+            get_train_dict(target_dict, testkey),
+            mu_kernel_taus,
+            sigma_kernel_taus,
+            param_ranges=srp_param_ranges,
+            mu_scale=None,
+            sigma_scale=4,
+            bounds="default",
+            method="L-BFGS-B",
+            workers=-1,
+            options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+        )
+        print('BEST SOLUTION:')
+        print(_bestfit)
+
+    save_pickle(srp_testparams, modelfit_dir / "chamberland2018_TMmodel_validation.pkl")
 
 else:
     print("Loading fitted SRP model parameters...")
     srp_params = load_pickle(modelfit_dir / "chamberland2018_SRPmodel.pkl")
+    srp_testparams = load_pickle(modelfit_dir / "chamberland2018_SRPmodel_validation.pkl")
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

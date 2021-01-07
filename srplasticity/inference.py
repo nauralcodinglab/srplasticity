@@ -112,14 +112,14 @@ def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):
     )
 
 
-def _default_parameter_bounds(n_mu_taus, n_sigma_taus):
+def _default_parameter_bounds(mu_taus, sigma_taus):
     """ returns default parameter boundaries for the SRP fitting procedure """
     return [
-        (-5, 5),  # mu baseline
-        *[(-np.inf, np.inf)] * n_mu_taus,  # mu taus
-        (-5, 5),  # sigma baseline
-        *[(-np.inf, np.inf)] * n_sigma_taus,  # sigma taus
-        (0.001, np.inf),  # sigma scale
+        (-6, 6),  # mu baseline
+        *[(-10 * tau, 10 * tau) for tau in mu_taus],  # mu amps
+        (-6, 6),  # sigma baseline
+        *[(-10 * tau, 10 * tau) for tau in sigma_taus],  # sigma amps
+        (0.001, 100),  # sigma scale
     ]
 
 
@@ -130,8 +130,8 @@ def _default_parameter_ranges():
     """
 
     return (
-        slice(-3, 3, 1),  # mu_baseline
-        slice(-2, 2, 0.5),  # taus
+        slice(-3, 3, 0.5),  # mu_baseline
+        slice(-2, 2, 0.25),  # taus
     )
 
 
@@ -341,7 +341,7 @@ def fit_srp_model_gridsearch(
     sigma_taus = np.atleast_1d(sigma_taus)
 
     if bounds == "default":
-        bounds = _default_parameter_bounds(len(mu_taus), len(sigma_taus))
+        bounds = _default_parameter_bounds(mu_taus, sigma_taus)
 
     # 2. INITIALIZE WRAPPED MINIMIZER FUNCTION
     wrapped_minimizer = MinimizeWrapper(
@@ -359,14 +359,27 @@ def fit_srp_model_gridsearch(
     starts = _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale)
 
     # 4. RUN
+
+    print('STARTING GRID SEARCH FITTING PROCEDURE')
+    print('- Using {} cores in parallel'.format(workers))
+    print('- Iterating over a total of {} initial starts'.format(len(grid)))
+
+    print('Make a coffee. This might take a while...')
+
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
     # iterate over input arrays, possibly in parallel
     with MapWrapper(pool=workers) as mapper:
-        Jout = np.array(list(mapper(wrapped_minimizer, starts)))
+        listres = np.array(list(mapper(wrapped_minimizer, starts)))
 
-    fitted_params = [res["x"] for res in Jout]
+    fval = np.array([res["fun"] if res['success'] is True else np.nan for res in listres])
 
-    return Jout
+    bestsol_ix = np.nanargmin(fval)
+    bestsol = listres[bestsol_ix]
+    bestsol['initial_guess'] = starts[bestsol_ix]
+
+    fitted_params = _convert_fitting_params(bestsol["x"], mu_taus, sigma_taus, mu_scale)
+
+    return fitted_params, bestsol, starts, fval, listres
 
 
 def fit_srp_model(
@@ -401,7 +414,7 @@ def fit_srp_model(
     sigma_taus = np.atleast_1d(sigma_taus)
 
     if bounds == "default":
-        bounds = _default_parameter_bounds(len(mu_taus), len(sigma_taus))
+        bounds = _default_parameter_bounds(mu_taus, sigma_taus)
 
     optimizer_res = minimize(
         _objective_function,

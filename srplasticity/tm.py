@@ -239,5 +239,6 @@ def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, **kwargs):
         _objective_function,
         ranges=parameter_ranges,
         args=(target_dict, stimulus_dict),
+        finish=None,
         **kwargs
     )
