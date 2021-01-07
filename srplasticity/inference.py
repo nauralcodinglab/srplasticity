@@ -147,7 +147,9 @@ def _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale=None):
 
         if ndims == 2:
             # two dimensions: mu_init equals sigma_init, fixed sigma scale
-            assert sigma_scale is not None, 'Need to supply sigma scale or more parameter ranges'
+            assert (
+                sigma_scale is not None
+            ), "Need to supply sigma scale or more parameter ranges"
 
             start = [
                 params[0],
@@ -178,7 +180,7 @@ def _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale=None):
             ]
 
         else:
-            raise ValueError('supply either 2, 3 or 5 ranges of parameters')
+            raise ValueError("supply either 2, 3 or 5 ranges of parameters")
 
         starts.append(start)
     return np.array(starts)
@@ -312,7 +314,7 @@ def fit_srp_model_gridsearch(
     target_dict,
     mu_taus,
     sigma_taus,
-    param_ranges='default',
+    param_ranges="default",
     mu_scale=None,
     sigma_scale=1,
     bounds="default",
@@ -353,29 +355,31 @@ def fit_srp_model_gridsearch(
     )
 
     # 3. MAKE GRID
-    if param_ranges == 'default':
+    if param_ranges == "default":
         param_ranges = _default_parameter_ranges()
     grid = _get_grid(param_ranges)
     starts = _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale)
 
     # 4. RUN
 
-    print('STARTING GRID SEARCH FITTING PROCEDURE')
-    print('- Using {} cores in parallel'.format(workers))
-    print('- Iterating over a total of {} initial starts'.format(len(grid)))
+    print("STARTING GRID SEARCH FITTING PROCEDURE")
+    print("- Using {} cores in parallel".format(workers))
+    print("- Iterating over a total of {} initial starts".format(len(grid)))
 
-    print('Make a coffee. This might take a while...')
+    print("Make a coffee. This might take a while...")
 
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
     # iterate over input arrays, possibly in parallel
     with MapWrapper(pool=workers) as mapper:
         listres = np.array(list(mapper(wrapped_minimizer, starts)))
 
-    fval = np.array([res["fun"] if res['success'] is True else np.nan for res in listres])
+    fval = np.array(
+        [res["fun"] if res["success"] is True else np.nan for res in listres]
+    )
 
     bestsol_ix = np.nanargmin(fval)
     bestsol = listres[bestsol_ix]
-    bestsol['initial_guess'] = starts[bestsol_ix]
+    bestsol["initial_guess"] = starts[bestsol_ix]
 
     fitted_params = _convert_fitting_params(bestsol["x"], mu_taus, sigma_taus, mu_scale)
 
