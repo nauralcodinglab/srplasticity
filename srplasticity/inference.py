@@ -41,6 +41,18 @@ def _nll(y, mu, sigma):
     )
 
 
+def _mean_nll(y, mu, sigma):
+    """
+    Computes the mean NLL
+
+    :param y: (np.array) set of amplitudes
+    :param mu: (np.array) set of means
+    :param sigma: (np.array) set of stds
+    """
+
+    return _nll(y, mu, sigma) / np.count_nonzero(~np.isnan(y))
+
+
 def _total_loss(target_dict, mean_dict, sigma_dict):
     """
 
@@ -51,6 +63,20 @@ def _total_loss(target_dict, mean_dict, sigma_dict):
     loss = 0
     for key in target_dict.keys():
         loss += _nll(target_dict[key], mean_dict[key], sigma_dict[key])
+
+    return loss
+
+
+def _total_loss_equal_protocol_weights(target_dict, mean_dict, sigma_dict):
+    """
+
+    :param target_dict: dictionary mapping stimulation protocol keys to response amplitude matrices
+    :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
+    :return: total nll across all stimulus protocols
+    """
+    loss = 0
+    for key in target_dict.keys():
+        loss += _mean_nll(target_dict[key], mean_dict[key], sigma_dict[key])
 
     return loss
 
@@ -67,7 +93,7 @@ def _objective_function(x, *args):
     :return: total loss to be minimized
     """
     # Unroll arguments
-    target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale = args
+    target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss = args
 
     # Initialize model
     model = ExpSRP(*_convert_fitting_params(x, mu_taus, sigma_taus, mu_scale))
@@ -79,7 +105,17 @@ def _objective_function(x, *args):
         mean_dict[key], sigma_dict[key], _ = model.run_ISIvec(ISIvec)
 
     # return loss
-    return _total_loss(target_dict, mean_dict, sigma_dict)
+    if loss == 'default':
+        return _total_loss(target_dict, mean_dict, sigma_dict)
+
+    elif loss == 'equal':
+        return _total_loss_equal_protocol_weights(target_dict, mean_dict, sigma_dict)
+
+    elif callable(loss):
+        return loss(target_dict, mean_dict, sigma_dict)
+
+    else:
+        raise ValueError('Invalid loss function. Check the documentation for valid loss values')
 
 
 def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):

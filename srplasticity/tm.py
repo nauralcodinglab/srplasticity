@@ -18,7 +18,6 @@ from scipy.optimize import brute
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-
 def _sse(targets, estimate):
     """
 
@@ -27,6 +26,16 @@ def _sse(targets, estimate):
     :return: sum of squared errors
     """
     return np.nansum((targets - estimate) ** 2)
+
+
+def _mse(targets, estimate):
+    """
+
+    :param targets: 2D np.array with response amplitudes of shape [n_sweep, n_stimulus]
+    :param estimate: 1D np.array with estimated response amplitudes of shape [n_stimulus]
+    :return: sum of squared errors
+    """
+    return _sse(targets, estimate) / np.count_nonzero(~np.isnan(targets))
 
 
 def _total_loss(target_dict, estimates_dict):
@@ -42,6 +51,19 @@ def _total_loss(target_dict, estimates_dict):
     return loss
 
 
+def _total_loss_equal_protocol_weights(target_dict, estimates_dict):
+    """
+
+    :param target_dict: dictionary mapping stimulation protocol keys to response amplitude matrices
+    :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
+    :return: total sum of squares
+    """
+    loss = 0
+    for key in target_dict.keys():
+        loss += _mse(target_dict[key], estimates_dict[key])
+    return loss
+
+
 def _objective_function(x, *args):
     """
     Objective function for scipy.optimize.brute gridsearch
@@ -51,7 +73,7 @@ def _objective_function(x, *args):
     :return: total loss to be minimized
     """
     # initialize
-    target_dict, stimulus_dict = args
+    target_dict, stimulus_dict, loss = args
     model = TsodyksMarkramModel(*x)
 
     # compute estimates
@@ -61,7 +83,17 @@ def _objective_function(x, *args):
         model.reset()
 
     # return loss
-    return _total_loss(target_dict, estimates_dict)
+    if loss == 'default':
+        return _total_loss(target_dict, estimates_dict)
+
+    elif loss == 'equal':
+        return _total_loss_equal_protocol_weights(target_dict, estimates_dict)
+
+    elif callable(loss):
+        return loss(target_dict, estimates_dict)
+
+    else:
+        raise ValueError('Invalid loss function. Check the documentation for valid loss values')
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -224,13 +256,17 @@ class AdaptedTsodyksMarkramModel(TsodyksMarkramModel):
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, **kwargs):
+def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, loss='default', **kwargs):
     """
     Fitting the TM model to data using a brute Grid-search
 
     :param stimulus_dict: mapping of protocol keys to isi stimulation vectors
     :param target_dict: mapping of protocol keys to response matrices
     :param parameter_ranges: slice objects for parameters
+    :param loss: type of loss to be used. One of:
+            'default':  Sum of squared error across all observations
+            'equal':    Assign equal weight to each stimulation protocol instead of each observation.
+                        This computes the mean squared error for each protocol separately.
     :param kwargs: keyword args to be passed to scipy.optimize.brute
     :return: output of scipy.optimize.brute
     """
@@ -238,7 +274,7 @@ def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, **kwargs):
     return brute(
         _objective_function,
         ranges=parameter_ranges,
-        args=(target_dict, stimulus_dict),
+        args=(target_dict, stimulus_dict, loss),
         finish=None,
         **kwargs
     )

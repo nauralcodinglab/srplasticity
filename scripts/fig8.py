@@ -4,6 +4,8 @@ from pathlib import Path
 import os, inspect
 import numpy as np
 import string
+import sys
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 
 # Models
 from srplasticity.tm import fit_tm_model, TsodyksMarkramModel
@@ -15,42 +17,91 @@ from spiffyplots import MultiPanel
 import matplotlib.pyplot as plt
 import matplotlib
 
-matplotlib.style.use("spiffy")
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
-# OPTIONS
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-# Set to True to fit model parameters
+# FIG 8 SCRIPT OPTIONS
+# Set these to True to run the parameter inference algorithm.
 # Set to False to load fitted parameters from `scripts / modelfits`
-fitting_tm = False
-fitting_srp = False
+#
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# Total test sets (with independent fits each)
+fitting_tm = False  # Fit on whole dataset
+fitting_srp = False  # Fit on whole dataset
+do_bootstrap = False  # Bootstrap procedure for model comparison
+
+# All test sets to use in CV / bootstrap procedure
 test_keys = ["invivo", "100", "20", "20100", "111", "10100", "10020"]
 
-# Paths
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# OPTIONS: Parameter Inference
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Tsodyks-Markram model parameter ranges
+tm_param_ranges = (
+    slice(0.001, 0.0105, 0.0005),  # U
+    slice(0.001, 0.0105, 0.0005),  # f
+    slice(1, 501, 10),  # tau_u
+    slice(1, 501, 10),  # tau_r
+)
+
+# SRP model time constants
+mu_kernel_taus = [15, 100, 650]
+sigma_kernel_taus = [15, 100, 650]
+
+# Initial guess for sigma scale
+sigma_scale = 4
+
+# Parameter ranges for grid search. Total of 128 initial starts
+srp_param_ranges = (
+    slice(-3, 1, 0.25),  # both baselines
+    slice(-2, 2, 0.25),  # all amplitudes (weighted by tau in fitting procedure)
+)
+
+# Bootstrap parameters
+n_bootstrap = 20
+prop_include_bootstrap = 0.8  # proportion of data included in each bootstrap
+
+# Set seeds for bootstrap data sampling
+bootstrap_data_generation_seeds = np.arange(2020, 2020 + n_bootstrap, 1)
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PATHS
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 current_dir = Path(
     os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 )
 parent_dir = Path(os.path.dirname(current_dir))
 
 modelfit_dir = current_dir / "modelfits"
+bootstrap_dir = modelfit_dir / "bootstrap"
 data_dir = parent_dir / "data" / "processed" / "chamberland2018"
 figure_dir = current_dir / "figures"
 supplement_dir = current_dir / "supplements"
 
-# Plots
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PLOTTING OPTIONS
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+# Which testsets to plot for model comparisons
 plotted_testsets_ordered = ["20", "20100", "invivo"]
 
+matplotlib.style.use('spiffy')
 matplotlib.rc("xtick", top=False)
 matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 plt.rc("font", size=8)
-plt.rc("text", usetex=True)
+#plt.rc("text", usetex=True)
 
 figsize = (5.25102 * 1.5, 5.25102 * 1.5)  # From LaTeX readout of textwidth
 
@@ -151,6 +202,18 @@ def get_model_estimates(model, stimulus_dict):
         return estimates
 
 
+def wmse(targets, estimate):
+    """
+    :param targets: 2D np.array with response amplitudes of shape [n_sweep, n_stimulus]
+    :param estimate: 1D np.array with estimated response amplitudes of shape [n_stimulus]
+    :return: weighted mean squared errors (like in a WLS model)
+    """
+    sigma = np.nanstd(targets, 0)  # std per stimulus
+    x = targets / sigma
+    y = estimate / sigma
+    return np.nansum((x - y) ** 2) / np.count_nonzero(~np.isnan(targets))
+
+
 def mse(targets, estimate):
     """
     :param targets: 2D np.array with response amplitudes of shape [n_sweep, n_stimulus]
@@ -158,6 +221,15 @@ def mse(targets, estimate):
     :return: mean squared errors
     """
     return np.nansum((targets - estimate) ** 2) / np.count_nonzero(~np.isnan(targets))
+
+
+def sse(targets, estimate):
+    """
+    :param targets: 2D np.array with response amplitudes of shape [n_sweep, n_stimulus]
+    :param estimate: 1D np.array with estimated response amplitudes of shape [n_stimulus]
+    :return: sum of squared errors and number of non-NAN elements
+    """
+    return np.nansum((targets - estimate) ** 2), np.count_nonzero(~np.isnan(targets))
 
 
 def mse_by_protocol(target_dict, estimates_dict):
@@ -173,20 +245,53 @@ def mse_by_protocol(target_dict, estimates_dict):
     return loss
 
 
+def wmse_by_protocol(target_dict, estimates_dict):
+    """
+    :param target_dict: dictionary mapping stimulation protocol keys to response amplitude matrices
+    :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
+    :return: wmse by protocol
+    """
+    loss = {}
+    for key in target_dict.keys():
+        loss[key] = wmse(target_dict[key], estimates_dict[key])
+    return loss
+
+
+def mse_total_equal_protocol_weights(target_dict, estimates_dict):
+
+    n_protocols = len(target_dict.keys())
+    loss_total = 0
+    for key in target_dict.keys():
+        loss_total += mse(target_dict[key], estimates_dict[key]) * 1/n_protocols
+
+    return loss_total
+
+
+def mse_total(target_dict, estimates_dict):
+    """
+    :param target_dict: dictionary mapping stimulation protocol keys to response amplitude matrices
+    :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
+    :return: mse across all protocols (SSE/n_total
+    """
+
+    loss_total = 0
+    n_total = 0
+    for key in target_dict.keys():
+        loss, n = sse(target_dict[key], estimates_dict[key])
+        loss_total += loss
+        n_total += n
+
+    loss = loss_total / n_total
+
+    return loss
+
+
 def sterr(mat):
     """
     standard error of the mean
     :param mat: A matrix of [n_samples, n_spikes]
     """
     return np.nanstd(mat, 0) / np.sqrt(np.count_nonzero(~np.isnan(mat), 0))
-
-
-def get_train_dict(targets, test_key):
-    """
-    Get training dictionary based on the test key
-    """
-
-    return {key: targets[key] for key in protocol_names.keys() if key != test_key}
 
 
 def add_scalebar(
@@ -350,6 +455,129 @@ def add_scalebar(
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
+# HELPER FUNCTIONS: FITTING PROCEDURE
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+def get_train_dict(targets, test_key):
+    """
+    Get training dictionary based on the test key
+    """
+
+    return {key: targets[key] for key in protocol_names.keys() if key != test_key}
+
+
+def get_bootstrap_target_dict(target_dict, seed):
+    """ randomly excludes part of the data in each stimulation protocol """
+
+    bt_target_dict = {}
+    np.random.seed(seed)
+
+    for key, array in target_dict.items():
+        nsweeps = array.shape[0]
+
+        # sample randomly 80% of sweep indices
+        ix = np.random.choice(nsweeps, replace=False, size=int(nsweeps * prop_include_bootstrap))
+        bt_target_dict[key] = array[ix, :]
+
+    return bt_target_dict
+
+
+def fitting_tm_model(stim, targets):
+
+    tm_params, tm_sse, grid, sse_grid = fit_tm_model(
+        stim,
+        targets,
+        tm_param_ranges,
+        loss='default',
+        disp=True,  # display output
+        workers=-1,  # split over all available CPU cores
+        full_output=True,  # save function value at each grid node
+    )
+
+    return tm_params, tm_sse, grid, sse_grid
+
+
+def fitting_srp_model(stim, targets):
+
+    srp_params, bestfit, starts, fvals, allsols = fit_srp_model_gridsearch(
+        stim,
+        targets,
+        mu_kernel_taus,
+        sigma_kernel_taus,
+        param_ranges=srp_param_ranges,
+        mu_scale=None,  # normalized data
+        sigma_scale=4,
+        bounds="default",
+        method="L-BFGS-B",
+        workers=-1,
+        options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+    )
+
+    return srp_params, bestfit, starts, fvals, allsols
+
+
+def load_bootstrap_results():
+    """ Loads bootstrap fits from scripts/modelfits/bootstrap directory """
+
+    # Load n_bootstrap model fits
+    bootstrap_fits_tm = []
+    bootstrap_fits_srp = []
+    bootstrap_trainingdata = []
+
+    for i in range(n_bootstrap):
+        tm_filename = 'TM_{}.pkl'.format(i+1)
+        srp_filename = 'SRP_{}.pkl'.format(i+1)
+
+        bootstrap_fits_tm.append(load_pickle(bootstrap_dir / tm_filename))
+        bootstrap_fits_srp.append(load_pickle(bootstrap_dir / srp_filename))
+        bootstrap_trainingdata.append(load_pickle(bootstrap_dir / 'trainingdata' / '{}.pkl'.format(i+1)))
+
+    return bootstrap_fits_tm, bootstrap_fits_srp, bootstrap_trainingdata
+
+
+def bootstrap_analysis(tm_fits, srp_fits, trainingdata):
+    """
+    Analysis of bootstrap model fitting.
+    Computes train and test error per fit.
+    """
+    assert len(tm_fits) == len(srp_fits) == len(trainingdata)
+
+    tm_trainerror = np.zeros(len(tm_fits))
+    srp_trainerror = np.zeros(len(tm_fits))
+    tm_testerror = np.zeros(len(tm_fits))
+    srp_testerror = np.zeros(len(tm_fits))
+
+    for i in range(len(tm_fits)):
+
+        tm_trainmse = 0
+        tm_testmse = 0
+        srp_trainmse = 0
+        srp_testmse = 0
+
+        # Iterate over cross-validation (held out protocols)
+        for testkey in test_keys:
+
+            tm_estimate = get_model_estimates(TsodyksMarkramModel(*tm_fits[i][testkey]), stimulus_dict)
+            srp_estimate, _, _ = get_model_estimates(ExpSRP(*srp_fits[i][testkey]), stimulus_dict)
+
+            # Training error
+            tm_trainmse += mse_total_equal_protocol_weights(get_train_dict(trainingdata[i], testkey), tm_estimate) * 1/len(test_keys)
+            srp_trainmse += mse_total_equal_protocol_weights(get_train_dict(trainingdata[i], testkey), srp_estimate) * 1/len(test_keys)
+
+            # Testing error
+            tm_testmse += mse(target_dict[testkey], tm_estimate[testkey]) * 1/len(test_keys)
+            srp_testmse += mse(target_dict[testkey], srp_estimate[testkey]) * 1/len(test_keys)
+
+        tm_trainerror[i] = tm_trainmse
+        tm_testerror[i] = tm_testmse
+        srp_trainerror[i] = srp_trainmse
+        srp_testerror[i] = srp_testmse
+
+    return tm_testerror, tm_trainerror, srp_testerror, srp_trainerror
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
 # LOADING DATA FROM CHAMBERLAND ET AL. (2018)
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -393,26 +621,10 @@ example_trace = load_pickle(
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if fitting_tm:
-    print("Fitting TM model to Chamberland et al. (2018) data...")
-
-    # Tsodyks-Markram model parameter ranges
-    tm_param_ranges = (
-        slice(0.001, 0.0105, 0.0005),  # U
-        slice(0.001, 0.0105, 0.0005),  # f
-        slice(1, 501, 10),  # tau_u
-        slice(1, 501, 10),  # tau_r
-    )
+    print("\nFitting TM model to Chamberland et al. (2018) data...")
 
     # Step 1: Fitting to whole dataset
-    print("Fitting TM model to all protocols...")
-    tm_params, tm_sse, grid, sse_grid = fit_tm_model(
-        stimulus_dict,
-        target_dict,
-        tm_param_ranges,
-        disp=True,  # display output
-        workers=-1,  # split over all available CPU cores
-        full_output=True,  # save function value at each grid node
-    )
+    tm_params, tm_sse, grid, sse_grid = fitting_tm_model(stimulus_dict, target_dict)
 
     # Save fitted TM model parameters
     save_pickle(tm_params, modelfit_dir / "chamberland2018_TMmodel.pkl")
@@ -420,15 +632,11 @@ if fitting_tm:
     # Step 2: Holding out test sets defined in test_keys one at a time
     tm_testparams = {}
     for testkey in test_keys:
-        print("Holding out {} Hz data".format(testkey))
+        print("\nHolding out {} Hz data".format(testkey))
 
-        tm_testparams[testkey], _, _, _ = fit_tm_model(
+        tm_testparams[testkey], _, _, _ = fitting_tm_model(
             stimulus_dict,
-            get_train_dict(target_dict, testkey),
-            tm_param_ranges,
-            disp=True,  # display output
-            workers=-1,  # split over all available CPU cores
-            full_output=True,  # save function value at each grid node
+            get_train_dict(target_dict, testkey)
         )
         print("FITTED PARAMETERS:")
         print(tm_testparams[testkey])
@@ -436,7 +644,7 @@ if fitting_tm:
     save_pickle(tm_testparams, modelfit_dir / "chamberland2018_TMmodel_validation.pkl")
 
 else:
-    print("Loading fitted TM model parameters...")
+    print("\nLoading fitted TM model parameters...")
     tm_params = load_pickle(modelfit_dir / "chamberland2018_TMmodel.pkl")
     tm_testparams = load_pickle(modelfit_dir / "chamberland2018_TMmodel_validation.pkl")
 
@@ -447,36 +655,15 @@ else:
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if fitting_srp:
-    print("Fitting SRP model to Chamberland et al. (2018) data...")
-
-    # Pre-define fixed parameters
-    mu_kernel_taus = [15, 100, 650]
-    sigma_kernel_taus = [15, 100, 650]
-
-    # Initial guess for sigma scale
-    sigma_scale = 4
-
-    # Parameter ranges for grid search. Total of 128 initial starts
-    srp_param_ranges = (
-        slice(-3, 1, 0.25),  # both baselines
-        slice(-2, 2, 0.25),  # all amplitudes (weighted by tau in fitting procedure)
-    )
+    print("\nFitting SRP model to Chamberland et al. (2018) data...")
 
     # Step 1: Fitting to whole dataset
     print("Fitting SRP model to all protocols...")
-    srp_params, bestfit, _starts, _fvals, _allsols = fit_srp_model_gridsearch(
+    srp_params, bestfit, _, _, _ = fitting_srp_model(
         stimulus_dict,
-        target_dict,
-        mu_kernel_taus,
-        sigma_kernel_taus,
-        param_ranges=srp_param_ranges,
-        mu_scale=None,
-        sigma_scale=4,
-        bounds="default",
-        method="L-BFGS-B",
-        workers=-1,
-        options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+        target_dict
     )
+
     print("BEST SOLUTION:")
     print(bestfit)
 
@@ -486,21 +673,13 @@ if fitting_srp:
     # Step 2: Holding out test sets defined in test_keys one at a time
     srp_testparams = {}
     for testkey in test_keys:
-        print("Holding out {} Hz data".format(testkey))
+        print("\nHolding out {} Hz data".format(testkey))
 
-        srp_testparams[testkey], _bestfit, _, _, _ = fit_srp_model_gridsearch(
+        srp_testparams[testkey], _bestfit, _, _, _ = fitting_srp_model(
             stimulus_dict,
-            get_train_dict(target_dict, testkey),
-            mu_kernel_taus,
-            sigma_kernel_taus,
-            param_ranges=srp_param_ranges,
-            mu_scale=None,
-            sigma_scale=4,
-            bounds="default",
-            method="L-BFGS-B",
-            workers=-1,
-            options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
+            get_train_dict(target_dict, testkey)
         )
+
         print("BEST SOLUTION:")
         print(_bestfit)
 
@@ -515,6 +694,63 @@ else:
         modelfit_dir / "chamberland2018_SRPmodel_validation.pkl"
     )
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# BOOTSTRAP PROCEDURE
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+if do_bootstrap:
+    print('\n STARTING BOOTSTRAP...')
+    print('Seriously, go make a coffee. This will take a while.')
+
+    # Iterate over 10 / 20 bootstraps
+    for bootstrap_index in range(n_bootstrap):
+        print('\n Bootstrap number {} of {}'.format(bootstrap_index+1, n_bootstrap))
+
+        srp_temp = {}
+        tm_temp = {}
+
+        # 1. Randomly exclude 20% of cells
+        bt_target_dict = get_bootstrap_target_dict(target_dict,
+                                                   seed=bootstrap_data_generation_seeds[bootstrap_index])
+
+        # save dataset
+        save_pickle(
+            bt_target_dict, bootstrap_dir / 'trainingdata' / "{}.pkl".format(bootstrap_index+1)
+        )
+
+        # Iterate over test datasets (crossvalidation procedure)
+        for testkey in test_keys:
+
+            # Use bootstrap target dictionary to make training dictionary
+            bt_train_dict = get_train_dict(bt_target_dict, testkey)
+
+            srp_temp[testkey], _, _, _, _ = fitting_srp_model(
+                stimulus_dict,
+                get_train_dict(bt_train_dict, testkey)
+            )
+
+            tm_temp[testkey], _, _, _ = fitting_tm_model(
+                stimulus_dict,
+                get_train_dict(bt_train_dict, testkey)
+            )
+
+        # Save parameter estimates
+        save_pickle(
+            srp_temp, bootstrap_dir / "SRP_{}.pkl".format(bootstrap_index+1)
+        )
+        save_pickle(
+            tm_temp, bootstrap_dir / "TM_{}.pkl".format(bootstrap_index+1)
+        )
+
+# Load bootstrap fits
+bootstrap_fits_tm, bootstrap_fits_srp, bootstrap_traindata = load_bootstrap_results()
+
+# Calculate train and test error
+tm_testerror, tm_trainerror, srp_testerror, srp_trainerror = bootstrap_analysis(bootstrap_fits_tm,
+                                                                                bootstrap_fits_srp,
+                                                                                bootstrap_traindata)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -529,7 +765,7 @@ tm_test = {"est": {}, "mse": {}, "msenorm": {}, "testmse": 0}
 srp_test = {"mean": {}, "sigma": {}, "est": {}, "mse": {}, "msenorm": {}, "testmse": 0}
 
 datameans = {key: np.nanmean(x, 0) for key, x in target_dict.items()}
-data_mse = mse_by_protocol(target_dict, datameans)
+data_mse = mse_total_equal_protocol_weights(target_dict, datameans)
 
 for testkey in test_keys:
 
@@ -567,6 +803,7 @@ srp_sigma_kernels = ExponentialKernel(srp_params[5], srp_params[4])._all_exponen
 # PLOTTING FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 def plot_allNoiseCorrelations():
     """
     Investigate all noise correlations
@@ -747,12 +984,6 @@ def plot_comparative_fits(axes):
     axes[0].legend(frameon=False)
 
 
-def plot_protocols_data(axis):
-
-    datamean = np.nanmean(target_dict['100'],0)[:6]
-    axis.plot(target_dict['100'].mean())
-
-
 def plot_mse(axis):
 
     # Make data for barplot
@@ -832,19 +1063,21 @@ def plot_fig8():
     fig = MultiPanel(grid=[3, 3, 4], figsize=figsize)
 
     plot_traces(fig.panels[0])
-    plot_noisecor(fig.panels[2])
 
     # SRP Model fit
-    plot_kernel(fig.panels[3])
-    # plot_traces(model, fig.panels[4)
+    plot_kernel(fig.panels[1])  # mu kernel
+    # plot_modelfit(fig.panels[2])
+
+    # SRP sigma fit and noise correlation
+    plot_noisecor(fig.panels[3])
+    # plot_sigmafit(fig.panels[4])
     plot_std(fig.panels[5])
 
     # SRP / TM model fits
     plot_comparative_fits([fig.panels[ix] for ix in np.arange(6, 9)])
 
-    # MSE
+    # MSE averaged across bootstrap
     plot_mse(fig.panels[9])
-    # plot_totalmse(fig.panels[10)
 
     add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 12)
     plt.tight_layout()
@@ -860,9 +1093,10 @@ def plot_fig8():
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if __name__ == "__main__":
-    from srplasticity.srp import DetSRP, ExponentialKernel
 
-    # Plot of fits to all protocols when both models were fit to the whole dataset
+    # Supplementary plots
     #plot_allfits()
     #plot_allNoiseCorrelations()
+
+    # Make figure 8
     plot_fig8()
