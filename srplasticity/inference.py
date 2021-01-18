@@ -72,13 +72,14 @@ def _total_loss_equal_protocol_weights(target_dict, mean_dict, sigma_dict):
 
     :param target_dict: dictionary mapping stimulation protocol keys to response amplitude matrices
     :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
-    :return: total nll across all stimulus protocols
+    :return: total sum of squares
     """
+    n_protocols = len(target_dict.keys())
     loss = 0
     for key in target_dict.keys():
-        loss += _mean_nll(target_dict[key], mean_dict[key], sigma_dict[key])
-
+        loss += _mean_nll(target_dict[key], mean_dict[key], sigma_dict[key]) * 1/n_protocols
     return loss
+
 
 
 def _objective_function(x, *args):
@@ -105,17 +106,19 @@ def _objective_function(x, *args):
         mean_dict[key], sigma_dict[key], _ = model.run_ISIvec(ISIvec)
 
     # return loss
-    if loss == 'default':
+    if loss == "default":
         return _total_loss(target_dict, mean_dict, sigma_dict)
 
-    elif loss == 'equal':
+    elif loss == "equal":
         return _total_loss_equal_protocol_weights(target_dict, mean_dict, sigma_dict)
 
     elif callable(loss):
         return loss(target_dict, mean_dict, sigma_dict)
 
     else:
-        raise ValueError('Invalid loss function. Check the documentation for valid loss values')
+        raise ValueError(
+            "Invalid loss function. Check the documentation for valid loss values"
+        )
 
 
 def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):
@@ -355,6 +358,7 @@ def fit_srp_model_gridsearch(
     sigma_scale=1,
     bounds="default",
     method="L-BFGS-B",
+    loss='default',
     workers=1,
     **kwargs
 ):
@@ -371,6 +375,10 @@ def fit_srp_model_gridsearch(
     :param sigma_scale: sigma scale in case param_ranges only covers 2 dimensions
     :param bounds: bounds for parameters to be passed to minimizer function
     :param method: algorithm for minimizer function
+    :param loss: type of loss to be used. One of:
+            'default':  Sum of squared error across all observations
+            'equal':    Assign equal weight to each stimulation protocol instead of each observation.
+                        This computes the mean squared error for each protocol separately.
     :param workers: number of processors
     """
 
@@ -384,7 +392,7 @@ def fit_srp_model_gridsearch(
     # 2. INITIALIZE WRAPPED MINIMIZER FUNCTION
     wrapped_minimizer = MinimizeWrapper(
         _objective_function,
-        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale),
+        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss),
         bounds=bounds,
         method=method,
         **kwargs
@@ -430,6 +438,7 @@ def fit_srp_model(
     sigma_taus,
     mu_scale=None,
     bounds="default",
+    loss='default',
     algo="L-BFGS-B",
     **kwargs
 ):
@@ -445,7 +454,11 @@ def fit_srp_model(
     :param sigma_taus: predefined time constants for sigma kernel
     :param mu_scale: mean scale, defaults to None for normalized data
     :param bounds: bounds for parameters
-
+    :param loss: type of loss to be used. One of:
+            'default':  Sum of squared error across all observations
+            'equal':    Assign equal weight to each stimulation protocol instead of each observation.
+                        This computes the mean squared error for each protocol separately.
+    :param algo: Algorithm for fitting procedure
     :param kwargs: keyword args to be passed to scipy.optimize.brute
     :return: output of scipy.minimize
     """
@@ -461,10 +474,10 @@ def fit_srp_model(
         x0=initial_guess,
         method=algo,
         bounds=bounds,
-        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale),
+        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss),
         **kwargs
     )
 
     params = _convert_fitting_params(optimizer_res["x"], mu_taus, sigma_taus, mu_scale)
 
-    return (params, optimizer_res)
+    return params, optimizer_res

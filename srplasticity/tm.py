@@ -18,6 +18,7 @@ from scipy.optimize import brute
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+
 def _sse(targets, estimate):
     """
 
@@ -58,9 +59,10 @@ def _total_loss_equal_protocol_weights(target_dict, estimates_dict):
     :param estimates_dict: dictionary mapping stimulation protocol keys to estimated responses
     :return: total sum of squares
     """
+    n_protocols = len(target_dict.keys())
     loss = 0
     for key in target_dict.keys():
-        loss += _mse(target_dict[key], estimates_dict[key])
+        loss += _mse(target_dict[key], estimates_dict[key]) * 1/n_protocols
     return loss
 
 
@@ -83,17 +85,19 @@ def _objective_function(x, *args):
         model.reset()
 
     # return loss
-    if loss == 'default':
+    if loss == "default":
         return _total_loss(target_dict, estimates_dict)
 
-    elif loss == 'equal':
+    elif loss == "equal":
         return _total_loss_equal_protocol_weights(target_dict, estimates_dict)
 
     elif callable(loss):
         return loss(target_dict, estimates_dict)
 
     else:
-        raise ValueError('Invalid loss function. Check the documentation for valid loss values')
+        raise ValueError(
+            "Invalid loss function. Check the documentation for valid loss values"
+        )
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -256,7 +260,9 @@ class AdaptedTsodyksMarkramModel(TsodyksMarkramModel):
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def fit_tm_model(stimulus_dict, target_dict, parameter_ranges, loss='default', **kwargs):
+def fit_tm_model(
+    stimulus_dict, target_dict, parameter_ranges, loss="default", **kwargs
+):
     """
     Fitting the TM model to data using a brute Grid-search
 

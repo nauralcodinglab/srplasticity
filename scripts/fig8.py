@@ -2,15 +2,25 @@
 import pickle
 from pathlib import Path
 import os, inspect
-import numpy as np
 import string
 import sys
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
+
+# numpy / scipy
+import numpy as np
+import numpy.ma as ma
+import scipy.stats
 
 # Models
 from srplasticity.tm import fit_tm_model, TsodyksMarkramModel
-from srplasticity.srp import ExpSRP, ExponentialKernel
-from srplasticity.inference import fit_srp_model, fit_srp_model_gridsearch
+from srplasticity.srp import (
+    ExpSRP,
+    ExponentialKernel,
+    _convolve_spiketrain_with_kernel,
+    get_stimvec,
+)
+from srplasticity.inference import fit_srp_model_gridsearch
 
 # Plotting
 from spiffyplots import MultiPanel
@@ -95,17 +105,17 @@ supplement_dir = current_dir / "supplements"
 # Which testsets to plot for model comparisons
 plotted_testsets_ordered = ["20", "20100", "invivo"]
 
-matplotlib.style.use('spiffy')
+matplotlib.style.use("spiffy")
 matplotlib.rc("xtick", top=False)
 matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 plt.rc("font", size=8)
-#plt.rc("text", usetex=True)
+# plt.rc("text", usetex=True)
 
 figsize = (5.25102 * 1.5, 5.25102 * 1.5)  # From LaTeX readout of textwidth
 
-color = {"tm": "blue", "srp": "darkred"}
+color = {"tm": "#0077bb", "srp": "#cc3311", "accents": "grey"}
 c_kernels = ("#525252", "#969696", "#cccccc")  # greyscale
 
 markersize = 2
@@ -262,7 +272,7 @@ def mse_total_equal_protocol_weights(target_dict, estimates_dict):
     n_protocols = len(target_dict.keys())
     loss_total = 0
     for key in target_dict.keys():
-        loss_total += mse(target_dict[key], estimates_dict[key]) * 1/n_protocols
+        loss_total += mse(target_dict[key], estimates_dict[key]) * 1 / n_protocols
 
     return loss_total
 
@@ -295,22 +305,22 @@ def sterr(mat):
 
 
 def add_scalebar(
-        x_units=None,
-        y_units=None,
-        anchor=(0.98, 0.02),
-        x_size=None,
-        y_size=None,
-        y_label_space=0.02,
-        x_label_space=-0.02,
-        bar_space=0.06,
-        x_on_left=True,
-        linewidth=3,
-        remove_frame=True,
-        omit_x=False,
-        omit_y=False,
-        round=True,
-        usetex=True,
-        ax=None,
+    x_units=None,
+    y_units=None,
+    anchor=(0.98, 0.02),
+    x_size=None,
+    y_size=None,
+    y_label_space=0.02,
+    x_label_space=-0.02,
+    bar_space=0.06,
+    x_on_left=True,
+    linewidth=3,
+    remove_frame=True,
+    omit_x=False,
+    omit_y=False,
+    round=True,
+    usetex=True,
+    ax=None,
 ):
     """
     Automagically add a set of x and y scalebars to a matplotlib plot
@@ -459,6 +469,7 @@ def add_scalebar(
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+
 def get_train_dict(targets, test_key):
     """
     Get training dictionary based on the test key
@@ -477,7 +488,9 @@ def get_bootstrap_target_dict(target_dict, seed):
         nsweeps = array.shape[0]
 
         # sample randomly 80% of sweep indices
-        ix = np.random.choice(nsweeps, replace=False, size=int(nsweeps * prop_include_bootstrap))
+        ix = np.random.choice(
+            nsweeps, replace=False, size=int(nsweeps * prop_include_bootstrap)
+        )
         bt_target_dict[key] = array[ix, :]
 
     return bt_target_dict
@@ -489,7 +502,7 @@ def fitting_tm_model(stim, targets):
         stim,
         targets,
         tm_param_ranges,
-        loss='default',
+        loss='equal',
         disp=True,  # display output
         workers=-1,  # split over all available CPU cores
         full_output=True,  # save function value at each grid node
@@ -510,6 +523,7 @@ def fitting_srp_model(stim, targets):
         sigma_scale=4,
         bounds="default",
         method="L-BFGS-B",
+        loss='equal',
         workers=-1,
         options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
     )
@@ -526,12 +540,14 @@ def load_bootstrap_results():
     bootstrap_trainingdata = []
 
     for i in range(n_bootstrap):
-        tm_filename = 'TM_{}.pkl'.format(i+1)
-        srp_filename = 'SRP_{}.pkl'.format(i+1)
+        tm_filename = "TM_{}.pkl".format(i + 1)
+        srp_filename = "SRP_{}.pkl".format(i + 1)
 
         bootstrap_fits_tm.append(load_pickle(bootstrap_dir / tm_filename))
         bootstrap_fits_srp.append(load_pickle(bootstrap_dir / srp_filename))
-        bootstrap_trainingdata.append(load_pickle(bootstrap_dir / 'trainingdata' / '{}.pkl'.format(i+1)))
+        bootstrap_trainingdata.append(
+            load_pickle(bootstrap_dir / "trainingdata" / "{}.pkl".format(i + 1))
+        )
 
     return bootstrap_fits_tm, bootstrap_fits_srp, bootstrap_trainingdata
 
@@ -558,16 +574,36 @@ def bootstrap_analysis(tm_fits, srp_fits, trainingdata):
         # Iterate over cross-validation (held out protocols)
         for testkey in test_keys:
 
-            tm_estimate = get_model_estimates(TsodyksMarkramModel(*tm_fits[i][testkey]), stimulus_dict)
-            srp_estimate, _, _ = get_model_estimates(ExpSRP(*srp_fits[i][testkey]), stimulus_dict)
+            tm_estimate = get_model_estimates(
+                TsodyksMarkramModel(*tm_fits[i][testkey]), stimulus_dict
+            )
+            srp_estimate, _, _ = get_model_estimates(
+                ExpSRP(*srp_fits[i][testkey]), stimulus_dict
+            )
 
             # Training error
-            tm_trainmse += mse_total_equal_protocol_weights(get_train_dict(trainingdata[i], testkey), tm_estimate) * 1/len(test_keys)
-            srp_trainmse += mse_total_equal_protocol_weights(get_train_dict(trainingdata[i], testkey), srp_estimate) * 1/len(test_keys)
+            tm_trainmse += (
+                mse_total_equal_protocol_weights(
+                    get_train_dict(trainingdata[i], testkey), tm_estimate
+                )
+                * 1
+                / len(test_keys)
+            )
+            srp_trainmse += (
+                mse_total_equal_protocol_weights(
+                    get_train_dict(trainingdata[i], testkey), srp_estimate
+                )
+                * 1
+                / len(test_keys)
+            )
 
             # Testing error
-            tm_testmse += mse(target_dict[testkey], tm_estimate[testkey]) * 1/len(test_keys)
-            srp_testmse += mse(target_dict[testkey], srp_estimate[testkey]) * 1/len(test_keys)
+            tm_testmse += (
+                mse(target_dict[testkey], tm_estimate[testkey]) * 1 / len(test_keys)
+            )
+            srp_testmse += (
+                mse(target_dict[testkey], srp_estimate[testkey]) * 1 / len(test_keys)
+            )
 
         tm_trainerror[i] = tm_trainmse
         tm_testerror[i] = tm_testmse
@@ -575,6 +611,7 @@ def bootstrap_analysis(tm_fits, srp_fits, trainingdata):
         srp_testerror[i] = srp_testmse
 
     return tm_testerror, tm_trainerror, srp_testerror, srp_trainerror
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -610,9 +647,7 @@ for key in stimulus_dict:
     )
 
 # example trace
-example_trace = load_pickle(
-        Path(data_dir / 'example_trace.pkl')
-    )
+example_trace = load_pickle(Path(data_dir / "example_trace.pkl"))
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -635,8 +670,7 @@ if fitting_tm:
         print("\nHolding out {} Hz data".format(testkey))
 
         tm_testparams[testkey], _, _, _ = fitting_tm_model(
-            stimulus_dict,
-            get_train_dict(target_dict, testkey)
+            stimulus_dict, get_train_dict(target_dict, testkey)
         )
         print("FITTED PARAMETERS:")
         print(tm_testparams[testkey])
@@ -659,10 +693,7 @@ if fitting_srp:
 
     # Step 1: Fitting to whole dataset
     print("Fitting SRP model to all protocols...")
-    srp_params, bestfit, _, _, _ = fitting_srp_model(
-        stimulus_dict,
-        target_dict
-    )
+    srp_params, bestfit, _, _, _ = fitting_srp_model(stimulus_dict, target_dict)
 
     print("BEST SOLUTION:")
     print(bestfit)
@@ -676,8 +707,7 @@ if fitting_srp:
         print("\nHolding out {} Hz data".format(testkey))
 
         srp_testparams[testkey], _bestfit, _, _, _ = fitting_srp_model(
-            stimulus_dict,
-            get_train_dict(target_dict, testkey)
+            stimulus_dict, get_train_dict(target_dict, testkey)
         )
 
         print("BEST SOLUTION:")
@@ -701,23 +731,25 @@ else:
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 if do_bootstrap:
-    print('\n STARTING BOOTSTRAP...')
-    print('Seriously, go make a coffee. This will take a while.')
+    print("\n STARTING BOOTSTRAP...")
+    print("Seriously, go make a coffee. This will take a while.")
 
     # Iterate over 10 / 20 bootstraps
     for bootstrap_index in range(n_bootstrap):
-        print('\n Bootstrap number {} of {}'.format(bootstrap_index+1, n_bootstrap))
+        print("\n Bootstrap number {} of {}".format(bootstrap_index + 1, n_bootstrap))
 
         srp_temp = {}
         tm_temp = {}
 
         # 1. Randomly exclude 20% of cells
-        bt_target_dict = get_bootstrap_target_dict(target_dict,
-                                                   seed=bootstrap_data_generation_seeds[bootstrap_index])
+        bt_target_dict = get_bootstrap_target_dict(
+            target_dict, seed=bootstrap_data_generation_seeds[bootstrap_index]
+        )
 
         # save dataset
         save_pickle(
-            bt_target_dict, bootstrap_dir / 'trainingdata' / "{}.pkl".format(bootstrap_index+1)
+            bt_target_dict,
+            bootstrap_dir / "trainingdata" / "{}.pkl".format(bootstrap_index + 1),
         )
 
         # Iterate over test datasets (crossvalidation procedure)
@@ -727,30 +759,29 @@ if do_bootstrap:
             bt_train_dict = get_train_dict(bt_target_dict, testkey)
 
             srp_temp[testkey], _, _, _, _ = fitting_srp_model(
-                stimulus_dict,
-                get_train_dict(bt_train_dict, testkey)
+                stimulus_dict, get_train_dict(bt_train_dict, testkey)
             )
 
             tm_temp[testkey], _, _, _ = fitting_tm_model(
-                stimulus_dict,
-                get_train_dict(bt_train_dict, testkey)
+                stimulus_dict, get_train_dict(bt_train_dict, testkey)
             )
 
         # Save parameter estimates
-        save_pickle(
-            srp_temp, bootstrap_dir / "SRP_{}.pkl".format(bootstrap_index+1)
-        )
-        save_pickle(
-            tm_temp, bootstrap_dir / "TM_{}.pkl".format(bootstrap_index+1)
-        )
+        save_pickle(srp_temp, bootstrap_dir / "SRP_{}.pkl".format(bootstrap_index + 1))
+        save_pickle(tm_temp, bootstrap_dir / "TM_{}.pkl".format(bootstrap_index + 1))
 
 # Load bootstrap fits
 bootstrap_fits_tm, bootstrap_fits_srp, bootstrap_traindata = load_bootstrap_results()
 
 # Calculate train and test error
-tm_testerror, tm_trainerror, srp_testerror, srp_trainerror = bootstrap_analysis(bootstrap_fits_tm,
-                                                                                bootstrap_fits_srp,
-                                                                                bootstrap_traindata)
+tm_testerror, tm_trainerror, srp_testerror, srp_trainerror = bootstrap_analysis(
+    bootstrap_fits_tm, bootstrap_fits_srp, bootstrap_traindata
+)
+
+
+# Statistical tests
+train_pval = scipy.stats.ttest_rel(tm_trainerror, srp_trainerror)
+test_pval = scipy.stats.ttest_rel(tm_testerror, srp_testerror)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -761,8 +792,8 @@ tm_testerror, tm_trainerror, srp_testerror, srp_trainerror = bootstrap_analysis(
 tm_est = get_model_estimates(TsodyksMarkramModel(*tm_params), stimulus_dict)
 srp_mean, srp_sigma, srp_est = get_model_estimates(ExpSRP(*srp_params), stimulus_dict)
 
-tm_test = {"est": {}, "mse": {}, "msenorm": {}, "testmse": 0}
-srp_test = {"mean": {}, "sigma": {}, "est": {}, "mse": {}, "msenorm": {}, "testmse": 0}
+tm_test = {"est": {}}
+srp_test = {"mean": {}, "sigma": {}, "est": {}}
 
 datameans = {key: np.nanmean(x, 0) for key, x in target_dict.items()}
 data_mse = mse_total_equal_protocol_weights(target_dict, datameans)
@@ -773,29 +804,20 @@ for testkey in test_keys:
     tm_test["est"][testkey] = get_model_estimates(
         TsodyksMarkramModel(*tm_testparams[testkey]), stimulus_dict
     )
-    tm_test["mse"][testkey] = mse_by_protocol(target_dict, tm_test["est"][testkey])[
-        testkey
-    ]
 
     (
         srp_test["mean"][testkey],
         srp_test["sigma"][testkey],
         srp_test["est"][testkey],
     ) = get_model_estimates(ExpSRP(*srp_testparams[testkey]), stimulus_dict)
-    srp_test["mse"][testkey] = mse_by_protocol(target_dict, srp_test["mean"][testkey])[
-        testkey
-    ]
-
-    tm_test["msenorm"][testkey] = tm_test["mse"][testkey] / data_mse[testkey]
-    srp_test["msenorm"][testkey] = srp_test["mse"][testkey] / data_mse[testkey]
-
-    # Sum up test set errors
-    tm_test["testmse"] += tm_test["msenorm"][testkey]
-    srp_test["testmse"] += srp_test["msenorm"][testkey]
 
 # Stuff for plotting
-srp_kernels = ExponentialKernel(srp_params[2], srp_params[1])._all_exponentials
-srp_sigma_kernels = ExponentialKernel(srp_params[5], srp_params[4])._all_exponentials
+srp_mukernel = ExponentialKernel(srp_params[2], srp_params[1])
+srp_sigmakernel = ExponentialKernel(srp_params[5], srp_params[4])
+
+
+srp_kernels = srp_mukernel._all_exponentials
+srp_sigma_kernels = srp_sigmakernel._all_exponentials
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -803,6 +825,7 @@ srp_sigma_kernels = ExponentialKernel(srp_params[5], srp_params[4])._all_exponen
 # PLOTTING FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def plot_allNoiseCorrelations():
     """
@@ -823,8 +846,8 @@ def plot_allNoiseCorrelations():
         fig.panels[panel].set_ylabel(r"$\Delta x(s+1)$ (in SD)")
         fig.panels[panel].set_ylim(-4, 4)
         fig.panels[panel].set_xlim(-4, 4)
-        fig.panels[panel].set_xticks([-4, -2, 0, 2, 4])
-        fig.panels[panel].set_yticks([-4, -2, 0, 2, 4])
+        fig.panels[panel].set_xticks([-3, 0, 3])
+        fig.panels[panel].set_yticks([-3, 0, 3])
         fig.panels[panel].set_title(protocol_names[key])
         panel += 1
 
@@ -841,11 +864,12 @@ def plot_allfits():
     # Plot mean fit
     for ix, key in enumerate(list(target_dict.keys())):
         xax = np.arange(1, len(tm_est[key]) + 1)
-        standard_error = sterr(target_dict[key])
+        errors = np.nanstd(target_dict[key], 0) / 2
+
         fig.panels[ix].errorbar(
             xax,
             np.nanmean(target_dict[key], 0),
-            yerr=standard_error,
+            yerr=errors,
             color="black",
             marker="o",
             markersize=2,
@@ -887,18 +911,15 @@ def plot_allfits():
     plt.show()
 
 
-def plot_kernel(axis):
+def plot_kernel(axis, kernelobj, baseline):
     t_max = 1000  # in ms
-    t_inset = 1000
     x_ax = np.arange(0, t_max, 0.1)
-    inset_x_ax = np.arange(0, t_inset, 0.1)
 
-    inset_ax = axis.inset_axes([0.5, 0.5, 0.45, 0.45])
+    kernels = kernelobj._all_exponentials
 
-    flipped = np.flip(srp_kernels, 0)
-    flipped_sigma = np.flip(srp_sigma_kernels, 0)
-    for ix, kernel in enumerate(srp_kernels):
-        label = str(srp_params[2][2-ix])
+    flipped = np.flip(kernels, 0)
+    for ix, kernel in enumerate(kernels):
+        label = str(srp_params[2][2 - ix])
         axis.fill_between(
             x_ax,
             0,
@@ -908,31 +929,52 @@ def plot_kernel(axis):
             zorder=3 - ix,
             label=label,
         )
-        inset_ax.fill_between(
-            inset_x_ax,
-            0,
-            np.cumsum(flipped_sigma[:, : t_inset * 10], 0)[ix],
-            facecolor=c_kernels[2 - ix],
-            alpha=1,
-            zorder=3 - ix,
-        )
 
-    sum = np.sum(srp_kernels, 0)
-    sum_sigma = np.sum(srp_sigma_kernels, 0)
-    axis.plot(x_ax, sum[: t_max * 10], c="black", lw=lw)
-    inset_ax.plot(inset_x_ax, sum_sigma[: t_inset * 10], c="black", lw=lw)
+    # summed kernel
+    axis.plot(x_ax, kernelobj.kernel[: t_max * 10], c="black", lw=lw)
 
-    # Inset with first 100 ms
     axis.set_xlabel("t (ms)")
     axis.set_xticks([0, t_max])
     axis.set_yticks([0, 1])
-    inset_ax.set_xlabel("t(ms)")
-    inset_ax.set_xticks([0, t_inset])
-    inset_ax.set_yticks([0, 1])
 
-    axis.legend(frameon=False)
 
-    # axis.axis('off')
+    # INSET AXIS
+    # # # # # # # # #
+    inset_ax = axis.inset_axes([0.3, 0.45, 0.65, 0.5])
+
+    # Get spike trains
+    st_20 = get_stimvec(stimulus_dict["20"][:5], null=5, extra=10)
+    st_100 = get_stimvec(stimulus_dict["100"][:5], null=5, extra=10)
+
+    # convolve spike trains
+    conv_20 = baseline + _convolve_spiketrain_with_kernel(st_20, kernelobj.kernel)
+    conv_100 = baseline + _convolve_spiketrain_with_kernel(st_100, kernelobj.kernel)
+
+    # x axes in ms
+    x_ax_20 = np.arange(0, len(conv_20) * 0.1, 0.1)
+    x_ax_100 = np.arange(0, len(conv_100) * 0.1, 0.1)
+
+    # readout times
+    x_ax_readout_20 = np.where(st_20 == 1)[0]
+    x_ax_readout_100 = np.where(st_100 == 1)[0]
+
+    # readout values
+    readout_20 = conv_20[x_ax_readout_20]
+    readout_100 = conv_100[x_ax_readout_100]
+
+    inset_ax.plot(x_ax_20, conv_20, c='black', lw=lw, ls='dashed')
+    inset_ax.plot(x_ax_100, conv_100, c='black', lw=lw)
+
+    inset_ax.plot(x_ax_readout_20 * 0.1, readout_20, c=color['srp'], lw=0, marker='o')
+    inset_ax.plot(x_ax_readout_100 * 0.1, readout_100, c=color['srp'], lw=0, marker='o')
+
+    inset_ax.hlines(baseline, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
+    #inset_ax.hlines(0, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
+
+    # Inset with first 100 ms
+    inset_ax.set_xlabel("t (ms)")
+    inset_ax.set_ylim(-2.5, 2.5)
+    inset_ax.set_yticks([-2, 0, 2])
 
 
 def plot_comparative_fits(axes):
@@ -950,11 +992,11 @@ def plot_comparative_fits(axes):
     for ix, testkey in enumerate(plotted_testsets_ordered):
         # xax = np.arange(1, len(tm_est[testkey]) + 1)
         xax = np.arange(1, 7)
-        standard_error = sterr(target_dict[testkey])
+        errors = np.nanstd(target_dict[testkey], 0) / 2
         axes[ix].errorbar(
             xax,
             np.nanmean(target_dict[testkey][:, :6], 0),
-            yerr=standard_error[:6],
+            yerr=errors[:6],
             color="black",
             label="Data",
             capsize=capsize,
@@ -987,54 +1029,117 @@ def plot_comparative_fits(axes):
 def plot_mse(axis):
 
     # Make data for barplot
-    labels = np.array(["TM model", "SRP model"])
-    height = np.array([tm_test["testmse"] / 7, srp_test["testmse"] / 7])
+    labels = np.array(["Train", "Test"])
+    tm_means = np.array([tm_trainerror.mean(), tm_testerror.mean()])
+    srp_means = np.array([srp_trainerror.mean(), srp_testerror.mean()])
+    tm_std = np.array([sterr(tm_trainerror), sterr(tm_testerror)])
+    srp_std = np.array([sterr(srp_trainerror), sterr(srp_testerror)])
 
     x = np.arange(2)  # the label locations
+    width = 0.3
 
-    axis.bar(x[0], height[0], color=color["tm"])
-    axis.bar(x[1], height[1], color=color["srp"])
+    axis.bar(
+        x - width / 2, tm_means, width, color=color["tm"], label="TM model", yerr=tm_std
+    )
+    axis.bar(
+        x + width / 2,
+        srp_means,
+        width,
+        color=color["srp"],
+        label="SRP model",
+        yerr=srp_std,
+    )
+    axis.hlines(data_mse, -0.5, 1.5, color="black", ls="dashed", lw=lw * 2)
 
-    axis.set_ylim(1, 1.1)
-    axis.set_yticks([1, 1.1])
-    axis.set_ylabel("test MSE (norm.)")
+    axis.set_yticks([9, 9.5, 10])
+    axis.set_ylim(8.9, 10)
+    axis.set_ylabel("MSE")
     axis.set_xticks(x)
     axis.set_xticklabels(labels)
+    axis.set_xlim(-0.5, 1.5)
+    axis.legend(frameon=False, loc="upper left")
 
 
 def plot_noisecor(axis):
     stackdata = np.vstack([pair for pair in noisecor_data.values()])
 
-    axis.hlines(y=0, xmax=4, xmin=-4, color="darkred")
-    axis.vlines(x=0, ymax=4, ymin=-4, color="darkred")
+    axis.hlines(y=0, xmax=4, xmin=-4, color=color['accents'])
+    axis.vlines(x=0, ymax=4, ymin=-4, color=color['accents'])
     axis.scatter(stackdata[:, 0], stackdata[:, 1], s=0.5, c="black")
     axis.set_xlabel(r"$S_j$ amplitude deviation (std)")
     axis.set_ylabel(r"$S_{j+1}$ amplitude deviation (std)")
     axis.set_ylim(-4, 4)
     axis.set_xlim(-4, 4)
-    axis.set_xticks([-4, -2, 0, 2, 4])
-    axis.set_yticks([-4, -2, 0, 2, 4])
+    axis.set_xticks([-3, 0, 3])
+    axis.set_yticks([-3, 0, 3])
 
 
-def plot_std(axis):
+def plot_mufit(axis):
 
-    axis.plot(np.nanstd(target_dict['20'], 0), color='black', ls='dashed', marker='o', label = '20 Hz')
-    axis.plot(np.nanstd(target_dict['100'], 0), color='black', marker='s', label ='100 Hz')
+    xax = np.arange(10)
 
-    axis.plot(srp_sigma['20'], color=color['srp'], ls='dashed')
-    axis.plot(srp_sigma['100'], color=color['srp'])
+    axis.errorbar(
+        xax,
+        np.nanmean(target_dict["20"], 0),
+        yerr=np.nanstd(target_dict["20"], 0) / 2,
+        color="black",
+        ls="dashed",
+        marker="o",
+        label="20 Hz",
+        capsize=capsize,
+        elinewidth=0.7,
+    )
+    axis.errorbar(
+        xax,
+        np.nanmean(target_dict["100"], 0),
+        yerr=np.nanstd(target_dict["100"], 0) / 2,
+        color="black",
+        marker="s",
+        label="100 Hz",
+        capsize=capsize,
+        elinewidth=0.7,
+    )
 
-    axis.set_ylabel(r'sdt. deviation $\sigma$')
-    axis.set_xlabel('nr. spike')
+    axis.plot(srp_mean["20"], color=color["srp"], ls="dashed")
+    axis.plot(srp_mean["100"], color=color["srp"])
+
+    axis.set_ylabel(r"norm. EPSC")
+    axis.set_xlabel("spike nr.")
+    axis.set_ylim(0, 7.5)
+    axis.set_yticks([0, 2.5, 5, 7.5])
+
+    axis.legend(frameon=False)
+
+
+def plot_sigmafit(axis):
+
+    axis.plot(
+        np.nanstd(target_dict["20"], 0),
+        color="black",
+        ls="dashed",
+        marker="o",
+        label="20 Hz",
+    )
+    axis.plot(
+        np.nanstd(target_dict["100"], 0), color="black", marker="s", label="100 Hz"
+    )
+
+    axis.plot(srp_sigma["20"], color=color["srp"], ls="dashed")
+    axis.plot(srp_sigma["100"], color=color["srp"])
+
+    axis.set_ylabel(r"sdt. deviation $\sigma$")
+    axis.set_xlabel("spike nr.")
+    axis.set_ylim(0, 4.5)
+    axis.set_yticks([0, 1.5, 3, 4.5])
 
     axis.legend(frameon=False)
 
 
 def plot_traces(axis):
 
-    x_ax = np.arange(0, len(example_trace) * 0.1 , 0.1)
-    axis.plot(x_ax, example_trace, lw=0.5, color='lightgrey')
-    axis.plot(x_ax, example_trace.mean(1), lw=0.5, color='black')
+    x_ax = np.arange(0, len(example_trace) * 0.1, 0.1)
+    axis.plot(x_ax, example_trace, lw=0.5, color="lightgrey")
+    axis.plot(x_ax, example_trace.mean(1), lw=0.5, color="black")
     axis.set_ylim(-2000, 2500)
     add_scalebar(
         x_units="ms",
@@ -1052,7 +1157,8 @@ def plot_traces(axis):
         omit_y=False,
         round=True,
         usetex=True,
-        ax=axis)
+        ax=axis,
+    )
 
 
 def plot_fig8():
@@ -1064,19 +1170,25 @@ def plot_fig8():
 
     plot_traces(fig.panels[0])
 
-    # SRP Model fit
-    plot_kernel(fig.panels[1])  # mu kernel
-    # plot_modelfit(fig.panels[2])
+    # B. Mu kernel
+    plot_kernel(fig.panels[1], srp_mukernel, srp_params[0])
 
-    # SRP sigma fit and noise correlation
+    # C. Mu fit
+    plot_mufit(fig.panels[2])
+
+    # D. Noise correlation
     plot_noisecor(fig.panels[3])
-    # plot_sigmafit(fig.panels[4])
-    plot_std(fig.panels[5])
 
-    # SRP / TM model fits
+    # E. Sigma kernel
+    plot_kernel(fig.panels[4], srp_sigmakernel, srp_params[3])
+
+    # F. Sigma fit
+    plot_sigmafit(fig.panels[5])
+
+    # G. SRP / TM model fits
     plot_comparative_fits([fig.panels[ix] for ix in np.arange(6, 9)])
 
-    # MSE averaged across bootstrap
+    # H. MSE averaged across bootstrap
     plot_mse(fig.panels[9])
 
     add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 12)
@@ -1095,8 +1207,24 @@ def plot_fig8():
 if __name__ == "__main__":
 
     # Supplementary plots
-    #plot_allfits()
-    #plot_allNoiseCorrelations()
+    # plot_allfits()
+    # plot_allNoiseCorrelations()
 
     # Make figure 8
     plot_fig8()
+
+    # Print noise correlation analysis
+    print("\n NOISE CORRELATION:")
+    stacknoisecor = np.vstack([pair for pair in noisecor_data.values()])
+    stacknoisecor = stacknoisecor[~np.isnan(stacknoisecor).any(axis=1)]  # remove rows with NaNs
+    r, p = scipy.stats.pearsonr(stacknoisecor[:, 0], stacknoisecor[:, 1])
+    print("Pearson R = {}".format(r))
+    print("p = {}".format(p))
+
+
+    # Print bootstrap analysis
+    print("\n BOOTSTRAP ANALYSIS STATISTICAL TEST RESULTS:")
+    print("\n TM training error vs SRP training error:")
+    print(train_pval)
+    print("\n TM test error vs SRP test error:")
+    print(test_pval)

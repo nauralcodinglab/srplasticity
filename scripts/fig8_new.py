@@ -10,7 +10,8 @@ import numpy as np
 import scipy
 import string
 import sys
-sys.path.insert(1, os.path.join(sys.path[0], '..'))
+
+sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 # Models
 from srplasticity.tm import fit_tm_model, TsodyksMarkramModel
@@ -41,7 +42,7 @@ DO_BOOTSTRAP = False  # Bootstrap procedure for model comparison
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-LOSS = 'default'  # type of loss function to optimize
+LOSS = "default"  # type of loss function to optimize
 HCSE = False  # Whether to use Heteroskedasticity-consistent standard errors (Weighted least sqaures)
 
 TM_PARAM_RANGES = (
@@ -114,19 +115,21 @@ BOOTSTRAP_DIR = CURRENT_DIR / "bootstrap"
 # Which testsets to plot for model comparisons
 PLOT_TESTKEYS = ["20", "20100", "invivo"]
 
-matplotlib.style.use('spiffy')
+matplotlib.style.use("spiffy")
 matplotlib.rc("xtick", top=False)
 matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 plt.rc("font", size=8)
-#plt.rc("text", usetex=True)
+# plt.rc("text", usetex=True)
 
 PLOT_FIGSIZE = (5.25102 * 1.5, 5.25102 * 1.5)  # From LaTeX readout of textwidth
 
-PLOT_COLOR = {"tm": "blue",
-              "srp": "darkred",
-              "kernel": ["#525252", "#969696", "#cccccc"]}
+PLOT_COLOR = {
+    "tm": "blue",
+    "srp": "darkred",
+    "kernel": ["#525252", "#969696", "#cccccc"],
+}
 
 PLOT_MARKERSIZE = 2
 PLOT_CAPSIZE = 2
