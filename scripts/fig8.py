@@ -111,9 +111,10 @@ matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 plt.rc("font", size=8)
-# plt.rc("text", usetex=True)
+#plt.rc("text", usetex=True)
+plt.rcParams['figure.constrained_layout.use'] = True
 
-figsize = (5.25102 * 1.5, 5.25102 * 1.5)  # From LaTeX readout of textwidth
+figsize = (5.25102 * 1.3, 5.25102 * 1.3)  # From LaTeX readout of textwidth
 
 color = {"tm": "#0077bb", "srp": "#cc3311", "accents": "grey"}
 c_kernels = ("#525252", "#969696", "#cccccc")  # greyscale
@@ -1192,9 +1193,9 @@ def plot_fig8():
     plot_mse(fig.panels[9])
 
     add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 12)
-    plt.tight_layout()
+    #plt.tight_layout()
 
-    plt.savefig(figure_dir / "Fig8.pdf")
+    plt.savefig(figure_dir / "Fig8_raw.pdf", bbox_inches='tight')
     plt.show()
 
 

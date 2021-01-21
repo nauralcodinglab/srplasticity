@@ -9,7 +9,7 @@ from scipy.special import gamma  # gamma function
 from scipy.optimize import minimize
 from scipy._lib._util import MapWrapper
 from srplasticity.srp import ExpSRP
-from srplasticity._tools import MinimizeWrapper
+from srplasticity.tools import MinimizeWrapper
 
 # Multiprocessing
 import copyreg

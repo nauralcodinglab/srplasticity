@@ -1,26 +1,20 @@
 from srplasticity.tm import TsodyksMarkramModel, AdaptedTsodyksMarkramModel
 from srplasticity.srp import DetSRP, ExponentialKernel
 import numpy as np
+import string
 
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from spiffyplots import MultiPanel
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import scipy.stats as stats
-from srplasticity._tools import get_stimvec
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-# HELPER FUNCTIONS
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
+from srplasticity.tools import get_stimvec
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
-# TM MODEL
+# PARAMETERS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -33,9 +27,11 @@ matplotlib.rc("ytick", right=False)
 matplotlib.rc("ytick.minor", visible=False)
 matplotlib.rc("xtick.minor", visible=False)
 matplotlib.rc("axes.spines", top=False, right=False)
-plt.rc("font", size=8)
+plt.rcParams['figure.constrained_layout.use'] = True
 
-# plt.rc('text', usetex=False)
+plt.rc("font", size=7)
+
+plt.rc('text', usetex=True)
 # plt.rc('font', family='sans-serif')
 
 markersize = 3
@@ -57,6 +53,7 @@ cTM_13 = TsodyksMarkramModel(
     f=np.array([0.2]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
+    amp=1
 )
 
 cTM_25 = TsodyksMarkramModel(
@@ -64,9 +61,10 @@ cTM_25 = TsodyksMarkramModel(
     f=np.array([0.2]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
+    amp=1
 )
 
-# PARAMETERS gTM EXAMPLE
+# PARAMETERS aTM EXAMPLE
 # # # # # # # # # # # # #
 
 aTM_13 = AdaptedTsodyksMarkramModel(
@@ -74,6 +72,7 @@ aTM_13 = AdaptedTsodyksMarkramModel(
     f=np.array([1]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
+    amp=1
 )
 
 aTM_25 = AdaptedTsodyksMarkramModel(
@@ -81,6 +80,7 @@ aTM_25 = AdaptedTsodyksMarkramModel(
     f=np.array([1]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
+    amp=1
 )
 
 # PARAMETERS LNL EXAMPLE
@@ -96,90 +96,115 @@ nrspikes = 5
 isi = 20
 isivec = [isi] * nrspikes
 examplespikes = get_stimvec([isi] * nrspikes, dt=dt, null=5, extra=30)
+t_spiketrain = np.arange(0, len(examplespikes) * dt, dt)
+
+# MODEL FITS
+# # # # # # # # # # # # #
+fit_cTM13 = cTM_13.run_spiketrain(examplespikes, dt = dt)
+fit_cTM25 = cTM_25.run_spiketrain(examplespikes, dt = dt)
+fit_aTM13 = aTM_13.run_spiketrain(examplespikes, dt = dt)
+fit_aTM25 = aTM_25.run_spiketrain(examplespikes, dt = dt)
+fit_srp13 = srp_13ca.run_spiketrain(examplespikes, return_all=True)
+fit_srp25 = srp_25ca.run_spiketrain(examplespikes, return_all=True)
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# FUNCTIONS
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+def add_figure_letters(axes, size=12):
+    """
+    Function to add Letters enumerating multipanel figures.
+
+    :param axes: list of matplotlib Axis objects to enumerate
+    :param size: Font size
+    """
+
+    for n, ax in enumerate(axes):
+
+        ax.text(
+            -0.15,
+            1.1,
+            string.ascii_uppercase[n],
+            transform=ax.transAxes,
+            size=size,
+            weight="bold",
+            usetex=False,
+            family="sans-serif",
+        )
 
 
 def plot():
     # Make Figure Grid
-    fig = plt.figure(constrained_layout=True, figsize=figsize)
-    spec = gridspec.GridSpec(ncols=3, nrows=3, figure=fig, wspace=0.1, hspace=0.1)
-    axA1 = fig.add_subplot(spec[0, 0])
-    axA2 = fig.add_subplot(spec[0, 1])
-    axA3 = fig.add_subplot(spec[0, 2])
+    fig = MultiPanel(grid=[(0, 0), (0, 1), (0, 2),
+                           (1, 0), (1, 1), (1, 2),
+                           (2, range(0, 2)), (2, 2)],
+                     figsize=figsize, wspace=0.1, hspace=0.1)
 
-    axB1 = fig.add_subplot(spec[1, 0])
-    axB2 = fig.add_subplot(spec[1, 1])
-    axB3 = fig.add_subplot(spec[1, 2])
-
-    subspec1 = spec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0.0, hspace=0.0)
-    axCleft = fig.add_subplot(spec[2, 0])
-    axCleft.axis("off")
+    subspec1 = fig.gridspec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0, hspace=0)
+    fig.panels[6].axis("off")
 
     axC1 = inset_axes(
-        axCleft,
+        fig.panels[6],
         width="100%",
         height="100%",
         loc="upper left",
-        bbox_to_anchor=(-0.05, 1, 0.55, 0.3),
-        bbox_transform=axCleft.transAxes,
+        bbox_to_anchor=(-0.05, 1, 0.23, 0.3),
+        bbox_transform=fig.panels[6].transAxes,
     )
     axC2 = inset_axes(
-        axCleft,
+        fig.panels[6],
         width="100%",
         height="100%",
         loc="lower left",
-        bbox_to_anchor=(-0.05, -0.05, 0.55, 0.6),
-        bbox_transform=axCleft.transAxes,
+        bbox_to_anchor=(-0.05, -0.05, 0.23, 0.6),
+        bbox_transform=fig.panels[6].transAxes,
     )
 
-    axC3 = fig.add_subplot(subspec1[0, 1])
-    axC4 = fig.add_subplot(subspec1[0, 2])
-    axC5 = fig.add_subplot(spec[2, 2])
+    axC3 = fig.fig.add_subplot(subspec1[0, 1])
+    axC4 = fig.fig.add_subplot(subspec1[0, 2])
 
     # Make plots
-    axA1, axA2 = plot_cTM_mech(axA1, axA2)
-    axA3 = plot_cTM_eff(axA3)
-    axB1, axB2 = plot_gTM_mech(axB1, axB2)
-    axB3 = plot_gTM_eff(axB3)
-    axC1, axC2, axC3, axC4, axC5 = plot_lnl(axC1, axC2, axC3, axC4, axC5)
+    plot_cTM_mech(fig.panels[0], fig.panels[1])
+    plot_cTM_eff(fig.panels[2])
+    plot_aTM_mech(fig.panels[3], fig.panels[4])
+    plot_aTM_eff(fig.panels[5])
+    plot_srp(axC1, axC2, axC3, axC4, fig.panels[7])
 
-    add_figure_letters([axA1, axA3, axB1, axB3, axCleft, axC5], size=12)
+    add_figure_letters([fig.panels[0], fig.panels[2], fig.panels[3], fig.panels[5], fig.panels[6],
+                        fig.panels[7]], size=10)
 
     return fig
 
 
 def plot_cTM_mech(ax1, ax2):
-    res_c = syn_c_13.run(examplespikes, dt, update_all=True)
-    ax1.plot(res_c["t"], res_c["u"][0], color=c_params[0], lw=lw, label="u")
-    ax1.plot(res_c["t"], res_c["R"][0], color=c_params[1], lw=lw, label="R")
-    ax1.axhline(y=res_c["u"][0][0], c=c_13ca, ls="dashed", lw=lw)
+    ax1.plot(t_spiketrain, fit_cTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax1.plot(t_spiketrain, fit_cTM13["r"], color=c_params[1], lw=lw, label="R")
+    ax1.axhline(y=fit_cTM13["u"][0], c=c_13ca, ls="dashed", lw=lw)
     ax1.set_xlabel("time (ms)")
     ax1.set_ylim(bottom=0, top=1.05)
     ax1.set_xlim(left=0)
-    ax1.set_yticks([res_c["u"][0][0], 1])
+    ax1.set_yticks([fit_cTM13["u"][0], 1])
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
 
-    res_c = syn_c_25.run(examplespikes, dt, update_all=True)
-    ax2.plot(res_c["t"], res_c["u"][0], color=c_params[0], lw=lw, label="u")
-    ax2.plot(res_c["t"], res_c["R"][0], color=c_params[1], lw=lw, label="R")
-    ax2.axhline(y=res_c["u"][0][0], c=c_25ca, ls="dashed", lw=lw)
+    ax2.plot(t_spiketrain, fit_cTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax2.plot(t_spiketrain, fit_cTM25["r"], color=c_params[1], lw=lw, label="R")
+    ax2.axhline(y=fit_cTM25["u"][0], c=c_25ca, ls="dashed", lw=lw)
     ax2.set_xlabel("time (ms)")
     ax2.set_ylim(bottom=0, top=1.05)
     ax2.set_xlim(left=0)
-    ax2.set_yticks([res_c["u"][0][0], 1])
+    ax2.set_yticks([fit_cTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
-    return ax1, ax2
 
 
 def plot_cTM_eff(ax):
-    res_c = syn_c_13.run(examplespikes, dt, update_all=True)
-    efficacy_c = res_c["psr"][0][res_c["psr"][0] > 0]
-
     ax.plot(
         np.arange(1, nrspikes + 1),
-        efficacy_c,
+        fit_cTM13['efficacies'],
         color=c_13ca,
         lw=lw,
         marker="o",
@@ -187,12 +212,9 @@ def plot_cTM_eff(ax):
     )
     ax.set_xlabel("spike number")
 
-    res_c = syn_c_25.run(examplespikes, dt, update_all=True)
-    efficacy_c = res_c["psr"][0][res_c["psr"][0] > 0]
-
     ax.plot(
         np.arange(1, nrspikes + 1),
-        efficacy_c,
+        fit_cTM25['efficacies'],
         color=c_25ca,
         lw=lw,
         marker="o",
@@ -201,46 +223,39 @@ def plot_cTM_eff(ax):
     ax.set_xlabel("spike number")
 
     ax.xaxis.set_ticks(np.arange(1, 6))
-    ax.set_ylim(bottom=0, top=1)
-    ax.set_ylabel("non-normalized efficacy")
-    ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
-
-    return ax
+    ax.set_ylim(bottom=0, top=0.7)
+    ax.set_ylabel("synaptic efficacy")
+    ax.yaxis.set_ticks([0, 0.2, 0.4, 0.6])
 
 
-def plot_gTM_mech(ax1, ax2):
-    res_c = syn_g_13.run(examplespikes, dt, update_all=True)
-    ax1.plot(res_c["t"], res_c["u"][0], color=c_params[0], lw=lw, label="u")
-    ax1.plot(res_c["t"], res_c["R"][0], color=c_params[1], lw=lw, label="R")
-    ax1.axhline(y=res_c["u"][0][0], c=c_13ca, ls="dashed", lw=lw)
+def plot_aTM_mech(ax1, ax2):
+    ax1.plot(t_spiketrain, fit_aTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax1.plot(t_spiketrain, fit_aTM13["r"], color=c_params[1], lw=lw, label="R")
+    ax1.axhline(y=fit_aTM13["u"][0], c=c_13ca, ls="dashed", lw=lw)
     ax1.set_xlabel("time (ms)")
     ax1.set_ylim(bottom=0, top=1.05)
     ax1.set_xlim(left=0)
-    ax1.set_yticks([res_c["u"][0][0], 1])
+    ax1.set_yticks([fit_aTM13["u"][0], 1])
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
 
-    res_c = syn_g_25.run(examplespikes, dt, update_all=True)
-    ax2.plot(res_c["t"], res_c["u"][0], color=c_params[0], lw=lw, label="u")
-    ax2.plot(res_c["t"], res_c["R"][0], color=c_params[1], lw=lw, label="R")
-    ax2.axhline(y=res_c["u"][0][0], c=c_25ca, ls="dashed", lw=lw)
+    ax2.plot(t_spiketrain, fit_aTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax2.plot(t_spiketrain, fit_aTM25["r"], color=c_params[1], lw=lw, label="R")
+    ax2.axhline(y=fit_aTM25["u"][0], c=c_25ca, ls="dashed", lw=lw)
     ax2.set_xlabel("time (ms)")
     ax2.set_ylim(bottom=0, top=1.05)
     ax2.set_xlim(left=0)
-    ax2.set_yticks([res_c["u"][0][0], 1])
+    ax2.set_yticks([fit_aTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
-    return ax1, ax2
 
 
-def plot_gTM_eff(ax):
-    res_c = syn_g_13.run(examplespikes, dt, update_all=True)
-    efficacy_c = res_c["psr"][0][res_c["psr"][0] > 0]
+def plot_aTM_eff(ax):
 
     ax.plot(
         np.arange(1, nrspikes + 1),
-        efficacy_c,
+        fit_aTM13['efficacies'],
         color=c_13ca,
         lw=lw,
         marker="o",
@@ -248,12 +263,9 @@ def plot_gTM_eff(ax):
     )
     ax.set_xlabel("spike number")
 
-    res_c = syn_g_25.run(examplespikes, dt, update_all=True)
-    efficacy_c = res_c["psr"][0][res_c["psr"][0] > 0]
-
     ax.plot(
         np.arange(1, nrspikes + 1),
-        efficacy_c,
+        fit_aTM25['efficacies'],
         color=c_25ca,
         lw=lw,
         marker="o",
@@ -263,20 +275,13 @@ def plot_gTM_eff(ax):
 
     ax.xaxis.set_ticks(np.arange(1, 6))
     ax.set_ylim(bottom=0, top=1)
-    ax.set_ylabel("non-normalized efficacy")
+    ax.set_ylabel("synaptic efficacy")
     ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
-    return ax
+def plot_srp(ax1, ax2, ax3, ax4, ax5):
 
-
-def plot_lnl(ax1, ax2, ax3, ax4, ax5):
-
-    res13 = syn_lnl_13.run(examplespikes[0])
-    res25 = syn_lnl_25.run(examplespikes[0])
-    t = np.arange(0, examplespikes.shape[1] * dt, dt)
-
-    kernel = syn_lnl_13.k[0:15000:100]
-    t_k = np.arange(0, syn_lnl_13.k.shape[0] * dt, dt) / 1000
+    kernel = srp_13ca.mu_kernel[0:15000:100]
+    t_k = np.arange(0, srp_13ca.mu_kernel.shape[0] * dt, dt) / 1000
     t_k = t_k[0:15000:100]
 
     ax1.plot(t_k, np.roll(kernel, 1), color="black", lw=lw)
@@ -296,7 +301,7 @@ def plot_lnl(ax1, ax2, ax3, ax4, ax5):
         horizontalalignment="center",
     )
 
-    ax2.plot(t, res13["filtered_s"] - syn_lnl_13.b, color="black", lw=lw)
+    ax2.plot(t_spiketrain, fit_srp13["filtered_spiketrain"] - srp_13ca.mu_baseline, color="black", lw=lw)
     ax2.set_ylim(-0.5, 8)
     ax2.yaxis.set_ticks([0, 5])
     ax2.set_xlabel("time (ms)")
@@ -310,25 +315,27 @@ def plot_lnl(ax1, ax2, ax3, ax4, ax5):
         horizontalalignment="center",
     )
 
-    ax3.plot(t, res13["filtered_s"], color=c_13ca, lw=lw)
-    ax3.plot(t, res25["filtered_s"], color=c_25ca, lw=lw)
-    ax3.axhline(y=syn_lnl_13.b, c=c_13ca, ls="dashed", lw=lw)
-    ax3.axhline(y=syn_lnl_25.b, c=c_25ca, ls="dashed", lw=lw)
+    ax3.plot(t_spiketrain, fit_srp13["filtered_spiketrain"], color=c_13ca, lw=lw)
+    ax3.plot(t_spiketrain, fit_srp25["filtered_spiketrain"], color=c_25ca, lw=lw)
+    ax3.axhline(y=srp_13ca.mu_baseline, c=c_13ca, ls="dashed", lw=lw)
+    ax3.axhline(y=srp_25ca.mu_baseline, c=c_25ca, ls="dashed", lw=lw)
     ax3.set_ylim(-6, 6)
     ax3.yaxis.set_ticks([-6, 0, 6])
     ax3.set_xlabel("time (ms)")
     ax3.set_title(r"$\mathbf{k}_\mu\ast S+b$")
+    ax3.xaxis.set_ticks([0, 100])
 
-    ax4.plot(t, res13["nl_readout"], color=c_13ca, lw=lw)
-    ax4.plot(t, res25["nl_readout"], color=c_25ca, lw=lw)
+    ax4.plot(t_spiketrain, fit_srp13["nonlinear_readout"], color=c_13ca, lw=lw)
+    ax4.plot(t_spiketrain, fit_srp25["nonlinear_readout"], color=c_25ca, lw=lw)
     ax4.set_ylim(bottom=0, top=1)
     ax4.yaxis.set_ticks([0, 0.5, 1])
     ax4.set_yticklabels([0, 0.5, 1])
     ax4.set_xlabel("time (ms)")
     ax4.set_title(r"$f(\mathbf{k}_\mu\ast S+b)$")
+    ax4.xaxis.set_ticks([0, 100])
 
-    eff13 = res13["efficacy"][np.argwhere(res13["efficacy"] != 0)]
-    eff25 = res25["efficacy"][np.argwhere(res25["efficacy"] != 0)]
+    eff13 = fit_srp13["efficacies"]
+    eff25 = fit_srp25["efficacies"]
     ax5.plot(
         np.arange(1, nrspikes + 1),
         eff13,
@@ -348,7 +355,7 @@ def plot_lnl(ax1, ax2, ax3, ax4, ax5):
     ax5.set_xlabel("spike number")
     ax5.xaxis.set_ticks(np.arange(1, 6))
     ax5.set_ylim(bottom=0, top=1)
-    ax5.set_ylabel("non-normalized efficacy")
+    ax5.set_ylabel("synaptic efficacy")
     ax5.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
 
     return ax1, ax2, ax3, ax4, ax5
@@ -363,6 +370,5 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(current_dir)
 
     fig = plot()
-    plt.tight_layout()
-    fig.savefig(parent_dir + "/Figures/Fig3_raw.pdf")
+    plt.savefig(current_dir + "/figures/Fig3_raw.pdf", bbox_inches='tight')
     plt.show()

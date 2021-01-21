@@ -10,7 +10,7 @@ This module contains classes for the implementation of the SRP model.
 from abc import ABC, abstractmethod
 import numpy as np
 from scipy.signal import lfilter
-from srplasticity._tools import get_stimvec
+from srplasticity.tools import get_stimvec
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
