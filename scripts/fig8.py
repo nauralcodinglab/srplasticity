@@ -105,21 +105,19 @@ supplement_dir = current_dir / "supplements"
 # Which testsets to plot for model comparisons
 plotted_testsets_ordered = ["20", "20100", "invivo"]
 
-matplotlib.style.use("spiffy")
-matplotlib.rc("xtick", top=False)
-matplotlib.rc("ytick", right=False)
-matplotlib.rc("ytick.minor", visible=False)
-matplotlib.rc("xtick.minor", visible=False)
-plt.rc("font", size=8)
-#plt.rc("text", usetex=True)
+plt.style.use('spiffy')
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['figure.constrained_layout.use'] = True
+plt.rc("font", size=7, family='serif')
+plt.rc('text', usetex=True)
 
-figsize = (5.25102 * 1.3, 5.25102 * 1.3)  # From LaTeX readout of textwidth
+figsize = (5.25102, 5.25102 * 1.05)  # From LaTeX readout of textwidth
 
 color = {"tm": "#0077bb", "srp": "#cc3311", "accents": "grey"}
 c_kernels = ("#525252", "#969696", "#cccccc")  # greyscale
 
-markersize = 2
+markersize = 3
 capsize = 2
 lw = 1
 
@@ -966,8 +964,8 @@ def plot_kernel(axis, kernelobj, baseline):
     inset_ax.plot(x_ax_20, conv_20, c='black', lw=lw, ls='dashed')
     inset_ax.plot(x_ax_100, conv_100, c='black', lw=lw)
 
-    inset_ax.plot(x_ax_readout_20 * 0.1, readout_20, c=color['srp'], lw=0, marker='o')
-    inset_ax.plot(x_ax_readout_100 * 0.1, readout_100, c=color['srp'], lw=0, marker='o')
+    inset_ax.plot(x_ax_readout_20 * 0.1, readout_20, c=color['srp'], lw=0, marker='o', markersize=markersize)
+    inset_ax.plot(x_ax_readout_100 * 0.1, readout_100, c=color['srp'], lw=0, marker='o', markersize=markersize)
 
     inset_ax.hlines(baseline, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
     #inset_ax.hlines(0, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
@@ -1000,8 +998,8 @@ def plot_comparative_fits(axes):
             yerr=errors[:6],
             color="black",
             label="Data",
-            capsize=capsize,
             marker="s",
+            capsize=capsize,
             lw=lw,
             elinewidth=lw * 0.7,
             markersize=markersize,
@@ -1089,6 +1087,8 @@ def plot_mufit(axis):
         label="20 Hz",
         capsize=capsize,
         elinewidth=0.7,
+        lw=lw,
+        markersize=markersize
     )
     axis.errorbar(
         xax,
@@ -1099,6 +1099,8 @@ def plot_mufit(axis):
         label="100 Hz",
         capsize=capsize,
         elinewidth=0.7,
+        lw=lw,
+        markersize=markersize
     )
 
     axis.plot(srp_mean["20"], color=color["srp"], ls="dashed")
@@ -1120,9 +1122,13 @@ def plot_sigmafit(axis):
         ls="dashed",
         marker="o",
         label="20 Hz",
+        lw=lw,
+        markersize=markersize
     )
     axis.plot(
-        np.nanstd(target_dict["100"], 0), color="black", marker="s", label="100 Hz"
+        np.nanstd(target_dict["100"], 0), color="black", marker="s", label="100 Hz",
+        lw=lw,
+        markersize=markersize
     )
 
     axis.plot(srp_sigma["20"], color=color["srp"], ls="dashed")
@@ -1192,8 +1198,7 @@ def plot_fig8():
     # H. MSE averaged across bootstrap
     plot_mse(fig.panels[9])
 
-    add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 12)
-    #plt.tight_layout()
+    add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 10)
 
     plt.savefig(figure_dir / "Fig8_raw.pdf", bbox_inches='tight')
     plt.show()

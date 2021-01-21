@@ -285,8 +285,8 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(current_dir)
 
     figure1, figure1_spiketrain = plot()
-    figure1.savefig(current_dir + "/figures/Fig1.pdf")
-    figure1_spiketrain.savefig(current_dir + "/figures/Fig1_spiketrain.pdf")
+    figure1.savefig(current_dir + "/figures/Fig1_raw.pdf")
+    figure1_spiketrain.savefig(current_dir + "/figures/Fig1_raw_spiketrain.pdf")
 
     figure1.show()
     pl.close("all")

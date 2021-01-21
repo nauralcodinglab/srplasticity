@@ -5,7 +5,6 @@ import string
 
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 from spiffyplots import MultiPanel
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -21,18 +20,12 @@ from srplasticity.tools import get_stimvec
 
 # PLOT SETTINGS
 # # # # # # # # # #
-
-matplotlib.rc("xtick", top=False)
-matplotlib.rc("ytick", right=False)
-matplotlib.rc("ytick.minor", visible=False)
-matplotlib.rc("xtick.minor", visible=False)
-matplotlib.rc("axes.spines", top=False, right=False)
+plt.style.use('spiffy')
+plt.rcParams['xtick.direction'] = 'in'
+plt.rcParams['ytick.direction'] = 'in'
 plt.rcParams['figure.constrained_layout.use'] = True
-
-plt.rc("font", size=7)
-
+plt.rc("font", size=7, family='serif')
 plt.rc('text', usetex=True)
-# plt.rc('font', family='sans-serif')
 
 markersize = 3
 lw = 1
@@ -142,15 +135,15 @@ def plot():
                            (2, range(0, 2)), (2, 2)],
                      figsize=figsize, wspace=0.1, hspace=0.1)
 
-    subspec1 = fig.gridspec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0, hspace=0)
     fig.panels[6].axis("off")
+    subspec1 = fig.gridspec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0, hspace=0)
 
     axC1 = inset_axes(
         fig.panels[6],
         width="100%",
         height="100%",
         loc="upper left",
-        bbox_to_anchor=(-0.05, 1, 0.23, 0.3),
+        bbox_to_anchor=(-0.02, 1, 0.18, 0.3),
         bbox_transform=fig.panels[6].transAxes,
     )
     axC2 = inset_axes(
@@ -158,7 +151,7 @@ def plot():
         width="100%",
         height="100%",
         loc="lower left",
-        bbox_to_anchor=(-0.05, -0.05, 0.23, 0.6),
+        bbox_to_anchor=(-0.02, -0.05, 0.18, 0.6),
         bbox_transform=fig.panels[6].transAxes,
     )
 
@@ -189,6 +182,7 @@ def plot_cTM_mech(ax1, ax2):
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
+    ax1.set_title('low baseline')
 
     ax2.plot(t_spiketrain, fit_cTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
     ax2.plot(t_spiketrain, fit_cTM25["r"], color=c_params[1], lw=lw, label="R")
@@ -199,6 +193,7 @@ def plot_cTM_mech(ax1, ax2):
     ax2.set_yticks([fit_cTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
+    ax2.set_title('high baseline')
 
 
 def plot_cTM_eff(ax):
@@ -209,6 +204,7 @@ def plot_cTM_eff(ax):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='low baseline'
     )
     ax.set_xlabel("spike number")
 
@@ -219,6 +215,7 @@ def plot_cTM_eff(ax):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='high baseline'
     )
     ax.set_xlabel("spike number")
 
@@ -226,7 +223,7 @@ def plot_cTM_eff(ax):
     ax.set_ylim(bottom=0, top=0.7)
     ax.set_ylabel("synaptic efficacy")
     ax.yaxis.set_ticks([0, 0.2, 0.4, 0.6])
-
+    ax.legend(frameon=False)
 
 def plot_aTM_mech(ax1, ax2):
     ax1.plot(t_spiketrain, fit_aTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10)
@@ -239,6 +236,7 @@ def plot_aTM_mech(ax1, ax2):
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
+    ax1.set_title('low baseline')
 
     ax2.plot(t_spiketrain, fit_aTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
     ax2.plot(t_spiketrain, fit_aTM25["r"], color=c_params[1], lw=lw, label="R")
@@ -249,6 +247,7 @@ def plot_aTM_mech(ax1, ax2):
     ax2.set_yticks([fit_aTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
+    ax2.set_title('high baseline')
 
 
 def plot_aTM_eff(ax):
@@ -260,6 +259,7 @@ def plot_aTM_eff(ax):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='low baseline'
     )
     ax.set_xlabel("spike number")
 
@@ -270,6 +270,7 @@ def plot_aTM_eff(ax):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='high baseline'
     )
     ax.set_xlabel("spike number")
 
@@ -277,6 +278,7 @@ def plot_aTM_eff(ax):
     ax.set_ylim(bottom=0, top=1)
     ax.set_ylabel("synaptic efficacy")
     ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
+    ax.legend(frameon=False)
 
 def plot_srp(ax1, ax2, ax3, ax4, ax5):
 
@@ -343,6 +345,7 @@ def plot_srp(ax1, ax2, ax3, ax4, ax5):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='low baseline'
     )
     ax5.plot(
         np.arange(1, nrspikes + 1),
@@ -351,12 +354,14 @@ def plot_srp(ax1, ax2, ax3, ax4, ax5):
         lw=lw,
         marker="o",
         markersize=markersize,
+        label='high baseline'
     )
     ax5.set_xlabel("spike number")
     ax5.xaxis.set_ticks(np.arange(1, 6))
     ax5.set_ylim(bottom=0, top=1)
     ax5.set_ylabel("synaptic efficacy")
     ax5.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
+    ax5.legend(frameon=False)
 
     return ax1, ax2, ax3, ax4, ax5
 
