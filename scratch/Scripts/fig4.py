@@ -39,10 +39,15 @@ t_modelres = 14  # seconds to plot in model result plot
 # 2. DATA (estimated from Neubrandt et al. 2018) Figure B
 # # # # # # # # # #
 
-data_x = np.array([0.1, 0.5, 1.0, 2.3, 3.5, 4.8, 6.0, 7.3, 8.50, 9.50, 12.5])
-data_y = np.array([2.1, 2.7, 3.4, 3.6, 3.1, 3.3, 2.8, 2.9, 2.25, 1.65, 1.20])
-data_yerr = np.array([0.4, 0.5, 0.4, 0.4, 0.2, 0.3, 0.2, 0.6, 0.25, 0.3, 0.15])
-data_xerr = np.array([0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0.2, 0.5])
+dataB_x = np.array([0.1, 0.5, 1.0, 2.3, 3.5, 4.8, 6.0, 7.3, 8.50, 9.50, 12.5])
+dataB_y = np.array([2.1, 2.7, 3.4, 3.6, 3.1, 3.3, 2.8, 2.9, 2.25, 1.65, 1.20])
+dataB_yerr = np.array([0.4, 0.5, 0.4, 0.4, 0.2, 0.3, 0.2, 0.6, 0.25, 0.3, 0.15])
+dataB_xerr = np.array([0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0.2, 0.5])
+
+dataE_x = np.array([0, 1, 2, 3, 4, 5, 6, 7, 9, 11.5, 14.5, 21])
+dataE_y = np.array([1.05, 1.55, 2.25, 2.35, 2.6, 2.8, 2.6, 3.1, 3.4, 3.45, 3.8, 3.7])
+dataE_yerr = np.array([0.1, 0.2, 0.25, 0.4, 0.7, 0.7, 0.3, 0.8, 0.5, 0.3, 0.9, 0.75])
+dataE_xerr = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.5, 1])
 
 # 3. MODEL PARAMETERS
 # # # # # # # # # #
@@ -86,7 +91,6 @@ spktr_example = spktr_burstonly.copy()
 spktr_example[[12000 + example_Tafter]] = 1  # Burst + One Test spike
 
 # Figure D
-
 firststim = 3000  # first spike (after 300 ms)
 stimfreq = 140  # 140 Hz as in Neubrandt et al.
 nrAPs = 15  # as in Neubrandt et al.
@@ -111,8 +115,8 @@ for testspike in Trange:
     ratio[index] = ulate / uctl
     ratio_burstmax[index] = ulate / burstmax
 
-res_burstonly = lateSTF.run(spktr_burstonly)
-res_example = lateSTF.run(spktr_example)
+res_burstonly = lateSTF.run_spiketrain(spktr_burstonly, return_all=True)
+res_example = lateSTF.run_spiketrain(spktr_example, return_all=True)
 
 # RUN FOR DIFFERENT NUMBER OF SPIKES (FIGURE E)
 # Fix test spike @ 3s after burst
