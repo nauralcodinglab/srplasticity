@@ -1088,7 +1088,7 @@ def plot_mufit(axis):
         capsize=capsize,
         elinewidth=0.7,
         lw=lw,
-        markersize=markersize
+        markersize=markersize,
     )
     axis.errorbar(
         xax,
@@ -1103,13 +1103,13 @@ def plot_mufit(axis):
         markersize=markersize
     )
 
-    axis.plot(srp_mean["20"], color=color["srp"], ls="dashed")
-    axis.plot(srp_mean["100"], color=color["srp"])
+    axis.plot(srp_mean["20"], color=color["srp"], ls="dashed", zorder=10)
+    axis.plot(srp_mean["100"], color=color["srp"], zorder=10)
 
     axis.set_ylabel(r"norm. EPSC")
     axis.set_xlabel("spike nr.")
-    axis.set_ylim(0, 7.5)
-    axis.set_yticks([0, 2.5, 5, 7.5])
+    axis.set_ylim(0, 8)
+    axis.set_yticks([0, 2, 4, 6, 8])
 
     axis.legend(frameon=False)
 
@@ -1131,8 +1131,8 @@ def plot_sigmafit(axis):
         markersize=markersize
     )
 
-    axis.plot(srp_sigma["20"], color=color["srp"], ls="dashed")
-    axis.plot(srp_sigma["100"], color=color["srp"])
+    axis.plot(srp_sigma["20"], color=color["srp"], ls="dashed", zorder=10)
+    axis.plot(srp_sigma["100"], color=color["srp"], zorder=10)
 
     axis.set_ylabel(r"sdt. deviation $\sigma$")
     axis.set_xlabel("spike nr.")

@@ -43,7 +43,10 @@ def get_ISIvec(freq, nstim):
     :param nstim: number of stimuli in the train
     :return: ISI vector in ms
     """
-    return [0] + list(np.array([1000 / freq]).astype(int)) * (nstim - 1)
+    if nstim == 0:
+        return []
+    else:
+        return [0] + list(np.array([1000 / freq]).astype(int)) * (nstim - 1)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #

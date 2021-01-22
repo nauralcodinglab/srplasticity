@@ -17,9 +17,6 @@ from srplasticity.tools import get_stimvec
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-
-# PLOT SETTINGS
-# # # # # # # # # #
 plt.style.use('spiffy')
 plt.rcParams['xtick.direction'] = 'in'
 plt.rcParams['ytick.direction'] = 'in'
