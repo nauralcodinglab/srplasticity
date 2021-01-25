@@ -3,13 +3,9 @@ import pickle
 from pathlib import Path
 import os, inspect
 import string
-import sys
-
-sys.path.insert(1, os.path.join(sys.path[0], ".."))
 
 # numpy / scipy
 import numpy as np
-import numpy.ma as ma
 import scipy.stats
 
 # Models
@@ -25,7 +21,6 @@ from srplasticity.inference import fit_srp_model_gridsearch
 # Plotting
 from spiffyplots import MultiPanel
 import matplotlib.pyplot as plt
-import matplotlib
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -1231,8 +1226,8 @@ def plot_fig8():
 if __name__ == "__main__":
 
     # Supplementary plots
-    # plot_allfits()
-    # plot_allNoiseCorrelations()
+    plot_allfits()
+    plot_allNoiseCorrelations()
 
     # Make figure 8
     plot_fig8()
