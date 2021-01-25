@@ -77,9 +77,12 @@ def _total_loss_equal_protocol_weights(target_dict, mean_dict, sigma_dict):
     n_protocols = len(target_dict.keys())
     loss = 0
     for key in target_dict.keys():
-        loss += _mean_nll(target_dict[key], mean_dict[key], sigma_dict[key]) * 1/n_protocols
+        loss += (
+            _mean_nll(target_dict[key], mean_dict[key], sigma_dict[key])
+            * 1
+            / n_protocols
+        )
     return loss
-
 
 
 def _objective_function(x, *args):
@@ -358,7 +361,7 @@ def fit_srp_model_gridsearch(
     sigma_scale=1,
     bounds="default",
     method="L-BFGS-B",
-    loss='default',
+    loss="default",
     workers=1,
     **kwargs
 ):
@@ -438,7 +441,7 @@ def fit_srp_model(
     sigma_taus,
     mu_scale=None,
     bounds="default",
-    loss='default',
+    loss="default",
     algo="L-BFGS-B",
     **kwargs
 ):

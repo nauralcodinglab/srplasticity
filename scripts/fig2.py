@@ -8,12 +8,12 @@ import matplotlib.gridspec as gridspec
 
 # PLOT SETTINGS
 # # # # # # # # # #
-plt.style.use('spiffy')
-plt.rcParams['xtick.direction'] = 'in'
-plt.rcParams['ytick.direction'] = 'in'
-plt.rcParams['figure.constrained_layout.use'] = True
-plt.rc("font", size=7, family='serif')
-plt.rc('text', usetex=True)
+plt.style.use("spiffy")
+plt.rcParams["xtick.direction"] = "in"
+plt.rcParams["ytick.direction"] = "in"
+plt.rcParams["figure.constrained_layout.use"] = True
+plt.rc("font", size=7, family="serif")
+plt.rc("text", usetex=True)
 
 markersize = 3
 capsize = 2
@@ -381,5 +381,5 @@ if __name__ == "__main__":
     traces = load_pickle(parent_dir + "/data/processed/chamberland2014/fig2_traces.pkl")
 
     fig = plot()
-    fig.savefig(current_dir + "/figures/Fig2_raw.pdf", bbox_inches='tight')
+    fig.savefig(current_dir + "/figures/Fig2_raw.pdf", bbox_inches="tight")
     plt.show()

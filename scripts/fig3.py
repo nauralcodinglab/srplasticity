@@ -17,12 +17,12 @@ from srplasticity.tools import get_stimvec
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-plt.style.use('spiffy')
-plt.rcParams['xtick.direction'] = 'in'
-plt.rcParams['ytick.direction'] = 'in'
-plt.rcParams['figure.constrained_layout.use'] = True
-plt.rc("font", size=7, family='serif')
-plt.rc('text', usetex=True)
+plt.style.use("spiffy")
+plt.rcParams["xtick.direction"] = "in"
+plt.rcParams["ytick.direction"] = "in"
+plt.rcParams["figure.constrained_layout.use"] = True
+plt.rc("font", size=7, family="serif")
+plt.rc("text", usetex=True)
 
 markersize = 3
 lw = 1
@@ -43,7 +43,7 @@ cTM_13 = TsodyksMarkramModel(
     f=np.array([0.2]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
-    amp=1
+    amp=1,
 )
 
 cTM_25 = TsodyksMarkramModel(
@@ -51,7 +51,7 @@ cTM_25 = TsodyksMarkramModel(
     f=np.array([0.2]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
-    amp=1
+    amp=1,
 )
 
 # PARAMETERS aTM EXAMPLE
@@ -62,7 +62,7 @@ aTM_13 = AdaptedTsodyksMarkramModel(
     f=np.array([1]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
-    amp=1
+    amp=1,
 )
 
 aTM_25 = AdaptedTsodyksMarkramModel(
@@ -70,7 +70,7 @@ aTM_25 = AdaptedTsodyksMarkramModel(
     f=np.array([1]),
     tau_u=np.array([50]),
     tau_r=np.array([10]),
-    amp=1
+    amp=1,
 )
 
 # PARAMETERS LNL EXAMPLE
@@ -90,10 +90,10 @@ t_spiketrain = np.arange(0, len(examplespikes) * dt, dt)
 
 # MODEL FITS
 # # # # # # # # # # # # #
-fit_cTM13 = cTM_13.run_spiketrain(examplespikes, dt = dt)
-fit_cTM25 = cTM_25.run_spiketrain(examplespikes, dt = dt)
-fit_aTM13 = aTM_13.run_spiketrain(examplespikes, dt = dt)
-fit_aTM25 = aTM_25.run_spiketrain(examplespikes, dt = dt)
+fit_cTM13 = cTM_13.run_spiketrain(examplespikes, dt=dt)
+fit_cTM25 = cTM_25.run_spiketrain(examplespikes, dt=dt)
+fit_aTM13 = aTM_13.run_spiketrain(examplespikes, dt=dt)
+fit_aTM25 = aTM_25.run_spiketrain(examplespikes, dt=dt)
 fit_srp13 = srp_13ca.run_spiketrain(examplespikes, return_all=True)
 fit_srp25 = srp_25ca.run_spiketrain(examplespikes, return_all=True)
 
@@ -102,6 +102,7 @@ fit_srp25 = srp_25ca.run_spiketrain(examplespikes, return_all=True)
 # FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def add_figure_letters(axes, size=12):
     """
@@ -127,10 +128,12 @@ def add_figure_letters(axes, size=12):
 
 def plot():
     # Make Figure Grid
-    fig = MultiPanel(grid=[(0, 0), (0, 1), (0, 2),
-                           (1, 0), (1, 1), (1, 2),
-                           (2, range(0, 2)), (2, 2)],
-                     figsize=figsize, wspace=0.1, hspace=0.1)
+    fig = MultiPanel(
+        grid=[(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, range(0, 2)), (2, 2)],
+        figsize=figsize,
+        wspace=0.1,
+        hspace=0.1,
+    )
 
     fig.panels[6].axis("off")
     subspec1 = fig.gridspec[2, 0:2].subgridspec(ncols=3, nrows=1, wspace=0, hspace=0)
@@ -162,14 +165,25 @@ def plot():
     plot_aTM_eff(fig.panels[5])
     plot_srp(axC1, axC2, axC3, axC4, fig.panels[7])
 
-    add_figure_letters([fig.panels[0], fig.panels[2], fig.panels[3], fig.panels[5], fig.panels[6],
-                        fig.panels[7]], size=10)
+    add_figure_letters(
+        [
+            fig.panels[0],
+            fig.panels[2],
+            fig.panels[3],
+            fig.panels[5],
+            fig.panels[6],
+            fig.panels[7],
+        ],
+        size=10,
+    )
 
     return fig
 
 
 def plot_cTM_mech(ax1, ax2):
-    ax1.plot(t_spiketrain, fit_cTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax1.plot(
+        t_spiketrain, fit_cTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10
+    )
     ax1.plot(t_spiketrain, fit_cTM13["r"], color=c_params[1], lw=lw, label="R")
     ax1.axhline(y=fit_cTM13["u"][0], c=c_13ca, ls="dashed", lw=lw)
     ax1.set_xlabel("time (ms)")
@@ -179,9 +193,11 @@ def plot_cTM_mech(ax1, ax2):
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
-    ax1.set_title('low baseline')
+    ax1.set_title("low baseline")
 
-    ax2.plot(t_spiketrain, fit_cTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax2.plot(
+        t_spiketrain, fit_cTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10
+    )
     ax2.plot(t_spiketrain, fit_cTM25["r"], color=c_params[1], lw=lw, label="R")
     ax2.axhline(y=fit_cTM25["u"][0], c=c_25ca, ls="dashed", lw=lw)
     ax2.set_xlabel("time (ms)")
@@ -190,29 +206,29 @@ def plot_cTM_mech(ax1, ax2):
     ax2.set_yticks([fit_cTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
-    ax2.set_title('high baseline')
+    ax2.set_title("high baseline")
 
 
 def plot_cTM_eff(ax):
     ax.plot(
         np.arange(1, nrspikes + 1),
-        fit_cTM13['efficacies'],
+        fit_cTM13["efficacies"],
         color=c_13ca,
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='low baseline'
+        label="low baseline",
     )
     ax.set_xlabel("spike number")
 
     ax.plot(
         np.arange(1, nrspikes + 1),
-        fit_cTM25['efficacies'],
+        fit_cTM25["efficacies"],
         color=c_25ca,
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='high baseline'
+        label="high baseline",
     )
     ax.set_xlabel("spike number")
 
@@ -222,8 +238,11 @@ def plot_cTM_eff(ax):
     ax.yaxis.set_ticks([0, 0.2, 0.4, 0.6])
     ax.legend(frameon=False)
 
+
 def plot_aTM_mech(ax1, ax2):
-    ax1.plot(t_spiketrain, fit_aTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax1.plot(
+        t_spiketrain, fit_aTM13["u"], color=c_params[0], lw=lw, label="u", zorder=10
+    )
     ax1.plot(t_spiketrain, fit_aTM13["r"], color=c_params[1], lw=lw, label="R")
     ax1.axhline(y=fit_aTM13["u"][0], c=c_13ca, ls="dashed", lw=lw)
     ax1.set_xlabel("time (ms)")
@@ -233,9 +252,11 @@ def plot_aTM_mech(ax1, ax2):
     ax1.set_yticklabels(["U", 1])
     ax1.get_yticklabels()[0].set_color(c_13ca)
     ax1.legend(frameon=False)
-    ax1.set_title('low baseline')
+    ax1.set_title("low baseline")
 
-    ax2.plot(t_spiketrain, fit_aTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10)
+    ax2.plot(
+        t_spiketrain, fit_aTM25["u"], color=c_params[0], lw=lw, label="u", zorder=10
+    )
     ax2.plot(t_spiketrain, fit_aTM25["r"], color=c_params[1], lw=lw, label="R")
     ax2.axhline(y=fit_aTM25["u"][0], c=c_25ca, ls="dashed", lw=lw)
     ax2.set_xlabel("time (ms)")
@@ -244,30 +265,30 @@ def plot_aTM_mech(ax1, ax2):
     ax2.set_yticks([fit_aTM25["u"][0], 1])
     ax2.set_yticklabels(["U", 1])
     ax2.get_yticklabels()[0].set_color(c_25ca)
-    ax2.set_title('high baseline')
+    ax2.set_title("high baseline")
 
 
 def plot_aTM_eff(ax):
 
     ax.plot(
         np.arange(1, nrspikes + 1),
-        fit_aTM13['efficacies'],
+        fit_aTM13["efficacies"],
         color=c_13ca,
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='low baseline'
+        label="low baseline",
     )
     ax.set_xlabel("spike number")
 
     ax.plot(
         np.arange(1, nrspikes + 1),
-        fit_aTM25['efficacies'],
+        fit_aTM25["efficacies"],
         color=c_25ca,
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='high baseline'
+        label="high baseline",
     )
     ax.set_xlabel("spike number")
 
@@ -276,6 +297,7 @@ def plot_aTM_eff(ax):
     ax.set_ylabel("synaptic efficacy")
     ax.yaxis.set_ticks([0, 0.3, 0.6, 0.9])
     ax.legend(frameon=False)
+
 
 def plot_srp(ax1, ax2, ax3, ax4, ax5):
 
@@ -300,7 +322,12 @@ def plot_srp(ax1, ax2, ax3, ax4, ax5):
         horizontalalignment="center",
     )
 
-    ax2.plot(t_spiketrain, fit_srp13["filtered_spiketrain"] - srp_13ca.mu_baseline, color="black", lw=lw)
+    ax2.plot(
+        t_spiketrain,
+        fit_srp13["filtered_spiketrain"] - srp_13ca.mu_baseline,
+        color="black",
+        lw=lw,
+    )
     ax2.set_ylim(-0.5, 8)
     ax2.yaxis.set_ticks([0, 5])
     ax2.set_xlabel("time (ms)")
@@ -342,7 +369,7 @@ def plot_srp(ax1, ax2, ax3, ax4, ax5):
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='low baseline'
+        label="low baseline",
     )
     ax5.plot(
         np.arange(1, nrspikes + 1),
@@ -351,7 +378,7 @@ def plot_srp(ax1, ax2, ax3, ax4, ax5):
         lw=lw,
         marker="o",
         markersize=markersize,
-        label='high baseline'
+        label="high baseline",
     )
     ax5.set_xlabel("spike number")
     ax5.xaxis.set_ticks(np.arange(1, 6))
@@ -372,5 +399,5 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(current_dir)
 
     fig = plot()
-    plt.savefig(current_dir + "/figures/Fig3_raw.pdf", bbox_inches='tight')
+    plt.savefig(current_dir + "/figures/Fig3_raw.pdf", bbox_inches="tight")
     plt.show()

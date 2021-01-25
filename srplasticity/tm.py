@@ -62,7 +62,7 @@ def _total_loss_equal_protocol_weights(target_dict, estimates_dict):
     n_protocols = len(target_dict.keys())
     loss = 0
     for key in target_dict.keys():
-        loss += _mse(target_dict[key], estimates_dict[key]) * 1/n_protocols
+        loss += _mse(target_dict[key], estimates_dict[key]) * 1 / n_protocols
     return loss
 
 

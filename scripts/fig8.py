@@ -105,12 +105,12 @@ supplement_dir = current_dir / "supplements"
 # Which testsets to plot for model comparisons
 plotted_testsets_ordered = ["20", "20100", "invivo"]
 
-plt.style.use('spiffy')
-plt.rcParams['xtick.direction'] = 'in'
-plt.rcParams['ytick.direction'] = 'in'
-plt.rcParams['figure.constrained_layout.use'] = True
-plt.rc("font", size=7, family='serif')
-plt.rc('text', usetex=True)
+plt.style.use("spiffy")
+plt.rcParams["xtick.direction"] = "in"
+plt.rcParams["ytick.direction"] = "in"
+plt.rcParams["figure.constrained_layout.use"] = True
+plt.rc("font", size=7, family="serif")
+plt.rc("text", usetex=True)
 
 figsize = (5.25102, 5.25102 * 1.05)  # From LaTeX readout of textwidth
 
@@ -501,7 +501,7 @@ def fitting_tm_model(stim, targets):
         stim,
         targets,
         tm_param_ranges,
-        loss='equal',
+        loss="equal",
         disp=True,  # display output
         workers=-1,  # split over all available CPU cores
         full_output=True,  # save function value at each grid node
@@ -522,7 +522,7 @@ def fitting_srp_model(stim, targets):
         sigma_scale=4,
         bounds="default",
         method="L-BFGS-B",
-        loss='equal',
+        loss="equal",
         workers=-1,
         options={"maxiter": 500, "disp": False, "ftol": 1e-12, "gtol": 1e-9},
     )
@@ -936,7 +936,6 @@ def plot_kernel(axis, kernelobj, baseline):
     axis.set_xticks([0, t_max])
     axis.set_yticks([0, 1])
 
-
     # INSET AXIS
     # # # # # # # # #
     inset_ax = axis.inset_axes([0.3, 0.45, 0.65, 0.5])
@@ -961,14 +960,30 @@ def plot_kernel(axis, kernelobj, baseline):
     readout_20 = conv_20[x_ax_readout_20]
     readout_100 = conv_100[x_ax_readout_100]
 
-    inset_ax.plot(x_ax_20, conv_20, c='black', lw=lw, ls='dashed')
-    inset_ax.plot(x_ax_100, conv_100, c='black', lw=lw)
+    inset_ax.plot(x_ax_20, conv_20, c="black", lw=lw, ls="dashed")
+    inset_ax.plot(x_ax_100, conv_100, c="black", lw=lw)
 
-    inset_ax.plot(x_ax_readout_20 * 0.1, readout_20, c=color['srp'], lw=0, marker='o', markersize=markersize)
-    inset_ax.plot(x_ax_readout_100 * 0.1, readout_100, c=color['srp'], lw=0, marker='o', markersize=markersize)
+    inset_ax.plot(
+        x_ax_readout_20 * 0.1,
+        readout_20,
+        c=color["srp"],
+        lw=0,
+        marker="o",
+        markersize=markersize,
+    )
+    inset_ax.plot(
+        x_ax_readout_100 * 0.1,
+        readout_100,
+        c=color["srp"],
+        lw=0,
+        marker="o",
+        markersize=markersize,
+    )
 
-    inset_ax.hlines(baseline, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
-    #inset_ax.hlines(0, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
+    inset_ax.hlines(
+        baseline, 0, np.max(x_ax_20), lw=lw, ls="dashed", color=color["accents"]
+    )
+    # inset_ax.hlines(0, 0, np.max(x_ax_20), lw=lw, ls='dashed', color=color['accents'])
 
     # Inset with first 100 ms
     inset_ax.set_xlabel("t (ms)")
@@ -1062,8 +1077,8 @@ def plot_mse(axis):
 def plot_noisecor(axis):
     stackdata = np.vstack([pair for pair in noisecor_data.values()])
 
-    axis.hlines(y=0, xmax=4, xmin=-4, color=color['accents'])
-    axis.vlines(x=0, ymax=4, ymin=-4, color=color['accents'])
+    axis.hlines(y=0, xmax=4, xmin=-4, color=color["accents"])
+    axis.vlines(x=0, ymax=4, ymin=-4, color=color["accents"])
     axis.scatter(stackdata[:, 0], stackdata[:, 1], s=0.5, c="black")
     axis.set_xlabel(r"$S_j$ amplitude deviation (std)")
     axis.set_ylabel(r"$S_{j+1}$ amplitude deviation (std)")
@@ -1100,7 +1115,7 @@ def plot_mufit(axis):
         capsize=capsize,
         elinewidth=0.7,
         lw=lw,
-        markersize=markersize
+        markersize=markersize,
     )
 
     axis.plot(srp_mean["20"], color=color["srp"], ls="dashed", zorder=10)
@@ -1123,12 +1138,15 @@ def plot_sigmafit(axis):
         marker="o",
         label="20 Hz",
         lw=lw,
-        markersize=markersize
+        markersize=markersize,
     )
     axis.plot(
-        np.nanstd(target_dict["100"], 0), color="black", marker="s", label="100 Hz",
+        np.nanstd(target_dict["100"], 0),
+        color="black",
+        marker="s",
+        label="100 Hz",
         lw=lw,
-        markersize=markersize
+        markersize=markersize,
     )
 
     axis.plot(srp_sigma["20"], color=color["srp"], ls="dashed", zorder=10)
@@ -1200,7 +1218,7 @@ def plot_fig8():
 
     add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 10)
 
-    plt.savefig(figure_dir / "Fig8_raw.pdf", bbox_inches='tight')
+    plt.savefig(figure_dir / "Fig8_raw.pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -1222,11 +1240,12 @@ if __name__ == "__main__":
     # Print noise correlation analysis
     print("\n NOISE CORRELATION:")
     stacknoisecor = np.vstack([pair for pair in noisecor_data.values()])
-    stacknoisecor = stacknoisecor[~np.isnan(stacknoisecor).any(axis=1)]  # remove rows with NaNs
+    stacknoisecor = stacknoisecor[
+        ~np.isnan(stacknoisecor).any(axis=1)
+    ]  # remove rows with NaNs
     r, p = scipy.stats.pearsonr(stacknoisecor[:, 0], stacknoisecor[:, 1])
     print("Pearson R = {}".format(r))
     print("p = {}".format(p))
-
 
     # Print bootstrap analysis
     print("\n BOOTSTRAP ANALYSIS STATISTICAL TEST RESULTS:")

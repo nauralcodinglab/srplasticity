@@ -12,12 +12,12 @@ import matplotlib.gridspec as gridspec
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-plt.style.use('spiffy')
-plt.rcParams['xtick.direction'] = 'in'
-plt.rcParams['ytick.direction'] = 'in'
-plt.rcParams['figure.constrained_layout.use'] = True
-plt.rc("font", size=7, family='serif')
-plt.rc('text', usetex=True)
+plt.style.use("spiffy")
+plt.rcParams["xtick.direction"] = "in"
+plt.rcParams["ytick.direction"] = "in"
+plt.rcParams["figure.constrained_layout.use"] = True
+plt.rc("font", size=7, family="serif")
+plt.rc("text", usetex=True)
 
 capsize = 2
 markersize = 3
@@ -200,7 +200,7 @@ def plot_dataE(ax):
         elinewidth=lw * 0.7,
         markersize=markersize,
         color=c_data,
-        label='data'
+        label="data",
     )
     for capline in caplines:
         capline.set_markeredgewidth(lw * 0.7)
@@ -246,13 +246,13 @@ def plot_modelres(ax, ax2):
     #    ax2.plot(AP_xaxis, freq_results[f], lw=lw)
     ax2.axhline(y=1, c=c_baseline, ls="dashed", lw=lw * 0.6)
     ax2.set_ylim(bottom=0, top=5.5)
-    ax2.plot(AP_xaxis, AP_ratio, lw=lw, c=c_model, zorder=10, label='model')
+    ax2.plot(AP_xaxis, AP_ratio, lw=lw, c=c_model, zorder=10, label="model")
     ax2.spines["right"].set_visible(False)
     ax2.spines["top"].set_visible(False)
     ax2.tick_params(left=True, bottom=True)
     ax2.set_xlabel("number of APs in burst")
     ax2.set_ylabel("test/control EPSC")
-    ax2.legend(frameon=False, loc='best', bbox_to_anchor=(0.5, 0., 0.5, 0.5))
+    ax2.legend(frameon=False, loc="best", bbox_to_anchor=(0.5, 0.0, 0.5, 0.5))
 
     return ax, ax2
 
@@ -301,7 +301,9 @@ def plot_modelsteps(axes):
     axes[0].set_title("Spiketrain $S(t)$", loc="center")
     axes[0].set_ylim(0.1)
 
-    axes[1].plot(x_ax, res_burstonly["filtered_spiketrain"][:t_modelsteps:100], c="black", lw=lw)
+    axes[1].plot(
+        x_ax, res_burstonly["filtered_spiketrain"][:t_modelsteps:100], c="black", lw=lw
+    )
     axes[1].axhline(y=0, c=c_zeroline, ls="dashed")
     axes[1].set_title(r"$\mathbf{k}_\mu\ast S+b$", loc="center")
 
@@ -373,5 +375,5 @@ if __name__ == "__main__":
     parent_dir = os.path.dirname(current_dir)
 
     fig = plot()
-    plt.savefig(current_dir + "/figures/Fig4_raw.pdf", bbox_inches='tight')
+    plt.savefig(current_dir + "/figures/Fig4_raw.pdf", bbox_inches="tight")
     plt.show()
