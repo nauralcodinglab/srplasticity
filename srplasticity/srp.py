@@ -344,6 +344,12 @@ class ExpSRP(ProbSRP):
         **kwargs
     ):
 
+        # Convert to at least 1D arrays
+        mu_taus = np.atleast_1d(mu_taus)
+        mu_amps = np.atleast_1d(mu_amps)
+        sigma_taus = np.atleast_1d(sigma_taus)
+        sigma_amps = np.atleast_1d(sigma_amps)
+
         # Construct mu kernel and sigma kernel from amplitudes and taus
         mu_kernel = ExponentialKernel(mu_taus, mu_amps, **kwargs)
         sigma_kernel = ExponentialKernel(sigma_taus, sigma_amps, **kwargs)
@@ -352,6 +358,7 @@ class ExpSRP(ProbSRP):
         super().__init__(
             mu_kernel, mu_baseline, sigma_kernel, sigma_baseline, mu_scale, sigma_scale
         )
+
 
         # Save amps and taus for version that is integrated between spikes
         self._mu_taus = np.array(mu_taus)
