@@ -1,18 +1,25 @@
-## Flexible short-term plasticity
+# Spike Response Plasticity
 
-Implementation of a linear-nonlinear model of short-term plasticity. 
+Implementation of a linear-nonlinear model of short-term plasticity as described in
+[Linear-Nonlinear Cascades Capture Synaptic Dynamics](https://www.biorxiv.org/content/early/2021/01/27/2020.06.04.133892).
 
-Code for Figure generation relates to the preprint [Synaptic Dynamics as Convolutional Units](https://www.biorxiv.org/content/10.1101/2020.06.04.133892v1)
+## Repository Structure
+
+- The **srplasticity** package contains all source code and implements
+the SRP model and the associated parameter inference.
+- The **examples** directory contains use examples and tutorials (currently in progress)
+- The **scripts** directory contains the scripts to reproduce the figures in the manuscript
+- The **data** directory contains the data used in the manuscript figures and the use examples.
+
+## Preprint Citation
 
 <pre><code>@article {Rossbroich2020.06.04.133892,
-	author = {Rossbroich, Julian and Trotter, Daniel and T{\'o}th, Katalin and Naud, Richard},
-	title = {Synaptic Dynamics as Convolutional Units},
-	elocation-id = {2020.06.04.133892},
-	year = {2020},
-	doi = {10.1101/2020.06.04.133892},
+	author = {Rossbroich, Julian and Trotter, Daniel and Beninger, John and T{\'o}th, Katalin and Naud, Richard},
+	title = {Linear-Nonlinear Cascades Capture Synaptic Dynamics},
+	year = {2021},
 	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2020/06/05/2020.06.04.133892},
-	eprint = {https://www.biorxiv.org/content/early/2020/06/05/2020.06.04.133892.full.pdf},
+	URL = {https://www.biorxiv.org/content/early/2021/01/27/2020.06.04.133892},
+	eprint = {https://www.biorxiv.org/content/early/2021/01/27/2020.06.04.133892.full.pdf},
 	journal = {bioRxiv}
 }
 </code></pre>

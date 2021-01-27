@@ -1,0 +1,9 @@
+# General
+numpy >= 1.19.2
+scipy >= 1.5.2
+pickle5
+
+# Plotting
+matplotlib
+seaborn
+spiffyplots >= 0.5
