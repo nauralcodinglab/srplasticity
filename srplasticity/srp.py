@@ -359,7 +359,6 @@ class ExpSRP(ProbSRP):
             mu_kernel, mu_baseline, sigma_kernel, sigma_baseline, mu_scale, sigma_scale
         )
 
-
         # Save amps and taus for version that is integrated between spikes
         self._mu_taus = np.array(mu_taus)
         self._sigma_taus = np.array(sigma_taus)

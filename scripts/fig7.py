@@ -61,14 +61,16 @@ sigma_amp = 200  # sigma amplitude
 sigma_baseline = -2  # sigma baseline
 sigma_scale = 10  # sigma scale
 
-true_parameters = {'mu_baseline': mu_baseline,
-          'mu_amps': mu_amp,
-          'mu_taus': mu_tau,
-          'sigma_baseline': sigma_baseline,
-          'sigma_amps': sigma_amp,
-          'sigma_taus': sigma_tau,
-          'mu_scale': None,
-          'sigma_scale': sigma_scale}
+true_parameters = {
+    "mu_baseline": mu_baseline,
+    "mu_amps": mu_amp,
+    "mu_taus": mu_tau,
+    "sigma_baseline": sigma_baseline,
+    "sigma_amps": sigma_amp,
+    "sigma_taus": sigma_tau,
+    "mu_scale": None,
+    "sigma_scale": sigma_scale,
+}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -105,10 +107,12 @@ parent_dir = Path(os.path.dirname(current_dir))
 
 plot_tmax = 15000
 
-color = {'inferred': "#cc3311",
-         'first': "#EE7733",
-         'second': "#0077BB",
-         'third': "#009988"}
+color = {
+    "inferred": "#cc3311",
+    "first": "#EE7733",
+    "second": "#0077BB",
+    "third": "#009988",
+}
 
 plt.style.use("spiffy")
 plt.rcParams["xtick.direction"] = "in"
@@ -123,24 +127,28 @@ markersize = 3
 capsize = 2
 lw = 1
 
-nll_landscapes = {'C': {'variable_parameters': ('sigma_amps', 'mu_amps')},
-                  'D': {'variable_parameters': ('sigma_scale', 'sigma_baseline')},
-                  'E': {'variable_parameters': ('sigma_baseline', 'mu_baseline')},
-                  'F': {'variable_parameters': ('sigma_scale', 'sigma_amps')}
-                  }
+nll_landscapes = {
+    "C": {"variable_parameters": ("sigma_amps", "mu_amps")},
+    "D": {"variable_parameters": ("sigma_scale", "sigma_baseline")},
+    "E": {"variable_parameters": ("sigma_baseline", "mu_baseline")},
+    "F": {"variable_parameters": ("sigma_scale", "sigma_amps")},
+}
 
 # parameter names for axes labels
-parameter_names = {'mu_baseline': r'$\mu$ baseline',
-          'mu_amps': r'$\mu$ amplitude',
-          'sigma_baseline': r'$\sigma$ baseline',
-          'sigma_amps':  r'$\sigma$ amplitude',
-          'sigma_scale':  r'$\sigma$ scale'}
+parameter_names = {
+    "mu_baseline": r"$\mu$ baseline",
+    "mu_amps": r"$\mu$ amplitude",
+    "sigma_baseline": r"$\sigma$ baseline",
+    "sigma_amps": r"$\sigma$ amplitude",
+    "sigma_scale": r"$\sigma$ scale",
+}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 def load_pickle(filename):
     with open(filename, "rb") as file:
@@ -204,8 +212,8 @@ def nll_gridsearch(variable_params):
 
     # Check landscape around true value
     xTrue, yTrue = [true_parameters[parameter] for parameter in variable_params]
-    x = np.linspace(xTrue*0.5, xTrue*1.5, n_gridnodes)
-    y = np.linspace(yTrue*0.5, yTrue*1.5, n_gridnodes)
+    x = np.linspace(xTrue * 0.5, xTrue * 1.5, n_gridnodes)
+    y = np.linspace(yTrue * 0.5, yTrue * 1.5, n_gridnodes)
     xgrid, ygrid = np.meshgrid(x, y)
     nll = np.zeros((n_gridnodes, n_gridnodes))
 
@@ -221,9 +229,8 @@ def nll_gridsearch(variable_params):
             means, sigmas, _ = model.run_ISIvec(ISIs)
             nll[xix, yix] = _nll(efficacies_true, means, sigmas)
 
-    return {'xgrid': xgrid,
-            'ygrid': ygrid,
-            'nll': nll}
+    return {"xgrid": xgrid, "ygrid": ygrid, "nll": nll}
+
 
 def mse(targets, estimate):
     """
@@ -246,28 +253,41 @@ def get_training_targets():
             # compute efficacies
             _, _, eff = model_true.run_ISIvec(isivec, training_nsweeps)
 
-            trainingsets[n].append({'targets': eff,
-                                    'stim': isivec})
+            trainingsets[n].append({"targets": eff, "stim": isivec})
 
     return trainingsets
 
+
 def calculate_parameter_error(trainingfits):
 
-    errors = {'mu_baseline': np.zeros((len(training_nspikes), training_niterations)).T,
-              'mu_amps': np.zeros((len(training_nspikes), training_niterations)).T,
-    'sigma_baseline': np.zeros((len(training_nspikes), training_niterations)).T,
-    'sigma_amps': np.zeros((len(training_nspikes), training_niterations)).T,
-    'sigma_scale': np.zeros((len(training_nspikes), training_niterations)).T}
+    errors = {
+        "mu_baseline": np.zeros((len(training_nspikes), training_niterations)).T,
+        "mu_amps": np.zeros((len(training_nspikes), training_niterations)).T,
+        "sigma_baseline": np.zeros((len(training_nspikes), training_niterations)).T,
+        "sigma_amps": np.zeros((len(training_nspikes), training_niterations)).T,
+        "sigma_scale": np.zeros((len(training_nspikes), training_niterations)).T,
+    }
     for ix, n in enumerate(training_nspikes):
-        paramlist = trainingfits[n]['params']
+        paramlist = trainingfits[n]["params"]
 
-        errors['mu_baseline'][:,ix] = np.abs((np.array([i[0] for i in paramlist]) - mu_baseline) / mu_baseline)
-        errors['mu_amps'][:,ix] = np.abs((np.array([i[1][0] for i in paramlist]) - mu_amp )/ mu_amp)
-        errors['sigma_baseline'][:,ix] = np.abs((np.array([i[3] for i in paramlist]) - sigma_baseline) / sigma_baseline)
-        errors['sigma_amps'][:,ix] = np.abs((np.array([i[4][0] for i in paramlist]) - sigma_amp) / sigma_amp)
-        errors['sigma_scale'][:,ix] = np.abs((np.array([i[-1] for i in paramlist]) - sigma_scale) / sigma_scale)
+        errors["mu_baseline"][:, ix] = np.abs(
+            (np.array([i[0] for i in paramlist]) - mu_baseline) / mu_baseline
+        )
+        errors["mu_amps"][:, ix] = np.abs(
+            (np.array([i[1][0] for i in paramlist]) - mu_amp) / mu_amp
+        )
+        errors["sigma_baseline"][:, ix] = np.abs(
+            (np.array([i[3] for i in paramlist]) - sigma_baseline) / sigma_baseline
+        )
+        errors["sigma_amps"][:, ix] = np.abs(
+            (np.array([i[4][0] for i in paramlist]) - sigma_amp) / sigma_amp
+        )
+        errors["sigma_scale"][:, ix] = np.abs(
+            (np.array([i[-1] for i in paramlist]) - sigma_scale) / sigma_scale
+        )
 
     return errors
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -311,15 +331,21 @@ PSCs += 0.05 * np.random.randn(PSCs.size).reshape(PSCs.shape)
 if COMPUTE_NLL_LANDSCAPE:
     for letter in nll_landscapes.keys():
         nll_landscapes[letter].update(
-            nll_gridsearch(nll_landscapes[letter]['variable_parameters']))
+            nll_gridsearch(nll_landscapes[letter]["variable_parameters"])
+        )
 
         # Save pickle
-        save_pickle(nll_landscapes[letter], current_dir / 'nll_landscape' / 'panel_{}.pickle'.format(letter))
+        save_pickle(
+            nll_landscapes[letter],
+            current_dir / "nll_landscape" / "panel_{}.pickle".format(letter),
+        )
 else:
     for letter in nll_landscapes.keys():
 
         # Load pickle
-        loaded = load_pickle(current_dir / 'nll_landscape' / 'panel_{}.pickle'.format(letter))
+        loaded = load_pickle(
+            current_dir / "nll_landscape" / "panel_{}.pickle".format(letter)
+        )
         nll_landscapes[letter].update(loaded)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -363,21 +389,21 @@ if COMPUTE_ALL_FITS:
         for ix in range(training_niterations):
 
             # parameter inference on training set
-            inferred_parameters, _ = fitSRPmodel(trainingsets[key][ix]['stim'],
-                                                 trainingsets[key][ix]['targets'])
+            inferred_parameters, _ = fitSRPmodel(
+                trainingsets[key][ix]["stim"], trainingsets[key][ix]["targets"]
+            )
 
             test_estimates, _, _ = ExpSRP(*inferred_parameters).run_ISIvec(teststim)
 
             testmse.append(mse(testtargets, test_estimates))
             params.append(inferred_parameters)
 
-        trainingfits[key] = {'params': params,
-                             'mse': np.array(testmse)}
+        trainingfits[key] = {"params": params, "mse": np.array(testmse)}
 
-    save_pickle(trainingfits, current_dir / 'modelfits' / 'fig7_allfits.pkl')
+    save_pickle(trainingfits, current_dir / "modelfits" / "fig7_allfits.pkl")
 
 else:
-    trainingfits = load_pickle(current_dir / 'modelfits' / 'fig7_allfits.pkl')
+    trainingfits = load_pickle(current_dir / "modelfits" / "fig7_allfits.pkl")
 
 parameter_errors = calculate_parameter_error(trainingfits)
 
@@ -394,83 +420,143 @@ def plot_spiketrain(axis, spktr):
 
 
 def plot_PSCs(axis1, axis2):
-    axis1.plot(PSCs.T[:plot_tmax][::5], label="data", color="black", lw=lw * 0.2, alpha=0.2)
-    axis1.plot(PSCs.mean(0)[:plot_tmax][::5], label="mean", color="black", lw=lw, zorder=10)
+    axis1.plot(
+        PSCs.T[:plot_tmax][::5], label="data", color="black", lw=lw * 0.2, alpha=0.2
+    )
+    axis1.plot(
+        PSCs.mean(0)[:plot_tmax][::5], label="mean", color="black", lw=lw, zorder=10
+    )
     axis1.axis("off")
-    axis1.set_title('true parameters')
+    axis1.set_title("true parameters")
 
-    axis2.plot(PSCs_inferred.T[:plot_tmax][::5], label="data", color=color['inferred'], lw=lw * 0.2, alpha=0.2)
     axis2.plot(
-        PSCs_inferred.mean(0)[:plot_tmax][::5], label="mean", color=color['inferred'], lw=lw, zorder=10
+        PSCs_inferred.T[:plot_tmax][::5],
+        label="data",
+        color=color["inferred"],
+        lw=lw * 0.2,
+        alpha=0.2,
+    )
+    axis2.plot(
+        PSCs_inferred.mean(0)[:plot_tmax][::5],
+        label="mean",
+        color=color["inferred"],
+        lw=lw,
+        zorder=10,
     )
     axis2.axis("off")
-    axis2.set_title('inferred parameters')
+    axis2.set_title("inferred parameters")
 
 
 def plot_contour(axis, data):
-    xparam, yparam = data['variable_parameters']
-    axis.contourf(data['xgrid'], data['ygrid'], data['nll'] / data['nll'].min(),
-                  levels=[1.005, 1.01, 1.05, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 5], cmap='Greys', vmin=0.9, vmax=1.6)
-    axis.plot(true_parameters[xparam],
-             true_parameters[yparam], marker='*',
-              color='black')
-    axis.plot(data['xgrid'].flatten()[data['nll'].argmin()],
-             data['ygrid'].flatten()[data['nll'].argmin()], marker='*',
-              color=color['inferred'])
+    xparam, yparam = data["variable_parameters"]
+    axis.contourf(
+        data["xgrid"],
+        data["ygrid"],
+        data["nll"] / data["nll"].min(),
+        levels=[1.005, 1.01, 1.05, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 5],
+        cmap="Greys",
+        vmin=0.9,
+        vmax=1.6,
+    )
+    axis.plot(
+        true_parameters[xparam], true_parameters[yparam], marker="*", color="black"
+    )
+    axis.plot(
+        data["xgrid"].flatten()[data["nll"].argmin()],
+        data["ygrid"].flatten()[data["nll"].argmin()],
+        marker="*",
+        color=color["inferred"],
+    )
 
     axis.set_xlabel(parameter_names[xparam])
     axis.set_ylabel(parameter_names[yparam])
 
 
 def plot_MSE(axis):
-    data = np.vstack([d['mse'] for d in trainingfits.values()])
+    data = np.vstack([d["mse"] for d in trainingfits.values()])
     means = data.mean(1)
     sem = scipy.stats.sem(data, 1)
 
-    axis.errorbar(training_nspikes, means, yerr=sem, color='black',
-                  markersize=markersize, lw=lw, marker='o')
-    axis.hlines(mse(testtargets, testtargets.mean(0)), ls='dashed',
-                xmin=np.min(training_nspikes), xmax = np.max(training_nspikes))
-    axis.set_ylabel('MSE')
-    axis.set_xlabel('nr. spikes')
-    axis.set_xscale('log')
+    axis.errorbar(
+        training_nspikes,
+        means,
+        yerr=sem,
+        color="black",
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+    )
+    axis.hlines(
+        mse(testtargets, testtargets.mean(0)),
+        ls="dashed",
+        xmin=np.min(training_nspikes),
+        xmax=np.max(training_nspikes),
+    )
+    axis.set_ylabel("MSE")
+    axis.set_xlabel("nr. spikes")
+    axis.set_xscale("log")
 
 
 def plot_paramerror(ax1, ax2):
 
-    ax1.errorbar(training_nspikes,
-                 parameter_errors['sigma_baseline'].mean(0) * 100,
-                 yerr=scipy.stats.sem(parameter_errors['sigma_baseline'] * 100, 0) ,
-                 markersize=markersize, lw=lw, marker='o', color=color['first'],
-                 label=r'$b_{\sigma}$')
-    ax1.errorbar(training_nspikes,
-                 parameter_errors['sigma_amps'].mean(0) * 100,
-                 yerr=scipy.stats.sem(parameter_errors['sigma_amps'] * 100, 0),
-                 markersize=markersize, lw=lw, marker='o', color=color['second'],
-                 label=r'$a_{\sigma}$')
-    ax1.errorbar(training_nspikes,
-                 parameter_errors['sigma_scale'].mean(0) * 100,
-                 yerr=scipy.stats.sem(parameter_errors['sigma_scale'] * 100, 0),
-                 markersize=markersize, lw=lw, marker='o', color=color['third'],
-                 label=r'$\sigma_0$')
-    ax1.set_xscale('log')
+    ax1.errorbar(
+        training_nspikes,
+        parameter_errors["sigma_baseline"].mean(0) * 100,
+        yerr=scipy.stats.sem(parameter_errors["sigma_baseline"] * 100, 0),
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+        color=color["first"],
+        label=r"$b_{\sigma}$",
+    )
+    ax1.errorbar(
+        training_nspikes,
+        parameter_errors["sigma_amps"].mean(0) * 100,
+        yerr=scipy.stats.sem(parameter_errors["sigma_amps"] * 100, 0),
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+        color=color["second"],
+        label=r"$a_{\sigma}$",
+    )
+    ax1.errorbar(
+        training_nspikes,
+        parameter_errors["sigma_scale"].mean(0) * 100,
+        yerr=scipy.stats.sem(parameter_errors["sigma_scale"] * 100, 0),
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+        color=color["third"],
+        label=r"$\sigma_0$",
+    )
+    ax1.set_xscale("log")
     ax1.legend(frameon=False)
-    ax1.set_ylabel(r'error (\%)')
-    ax1.set_xlabel('nr. spikes')
+    ax1.set_ylabel(r"error (\%)")
+    ax1.set_xlabel("nr. spikes")
 
-    ax2.errorbar(training_nspikes,
-                 parameter_errors['mu_baseline'].mean(0) * 100,
-                 yerr=scipy.stats.sem(parameter_errors['mu_baseline'] * 100, 0),
-                 markersize=markersize, lw=lw, marker='o', color=color['first'],
-                 label=r'$b_{\mu}$')
-    ax2.errorbar(training_nspikes,
-                 parameter_errors['mu_amps'].mean(0) * 100,
-                 yerr=scipy.stats.sem(parameter_errors['mu_baseline'] * 100, 0),
-                 markersize=markersize, lw=lw, marker='o', color=color['second'],
-                 label=r'$a_{\mu}$')
-    ax2.set_xscale('log')
+    ax2.errorbar(
+        training_nspikes,
+        parameter_errors["mu_baseline"].mean(0) * 100,
+        yerr=scipy.stats.sem(parameter_errors["mu_baseline"] * 100, 0),
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+        color=color["first"],
+        label=r"$b_{\mu}$",
+    )
+    ax2.errorbar(
+        training_nspikes,
+        parameter_errors["mu_amps"].mean(0) * 100,
+        yerr=scipy.stats.sem(parameter_errors["mu_baseline"] * 100, 0),
+        markersize=markersize,
+        lw=lw,
+        marker="o",
+        color=color["second"],
+        label=r"$a_{\mu}$",
+    )
+    ax2.set_xscale("log")
     ax2.legend(frameon=False)
-    ax2.set_xlabel('nr. spikes')
+    ax2.set_xlabel("nr. spikes")
 
 
 def plot_fig7():
@@ -488,11 +574,13 @@ def plot_fig7():
             ["G"] * 4 + ["H"] * 4 + ["I"] * 4,
             ["G"] * 4 + ["H"] * 4 + ["I"] * 4,
             ["G"] * 4 + ["H"] * 4 + ["I"] * 4,
-            ["G"] * 4 + ["H"] * 4 + ["I"] * 4
+            ["G"] * 4 + ["H"] * 4 + ["I"] * 4,
         ]
     )
 
-    fig = MultiPanel(labels=labels, figsize=figsize, label_size=10, label_location=(-0.5, 1.15))
+    fig = MultiPanel(
+        labels=labels, figsize=figsize, label_size=10, label_location=(-0.5, 1.15)
+    )
 
     # Split panels B and G
     fig.panels.B.axis("off")
@@ -506,21 +594,20 @@ def plot_fig7():
     # B
     plot_PSCs(axB1, axB2)
     # C-F
-    plot_contour(fig.panels.C, nll_landscapes['C'])
-    plot_contour(fig.panels.D, nll_landscapes['D'])
-    plot_contour(fig.panels.E, nll_landscapes['E'])
-    plot_contour(fig.panels.F, nll_landscapes['F'])
+    plot_contour(fig.panels.C, nll_landscapes["C"])
+    plot_contour(fig.panels.D, nll_landscapes["D"])
+    plot_contour(fig.panels.E, nll_landscapes["E"])
+    plot_contour(fig.panels.F, nll_landscapes["F"])
     fig.panels.C.set_yticks([150, 300, 450])
     fig.panels.D.set_yticks([-3, -2, -1])
     fig.panels.E.set_yticks([-3, -2, -1])
     fig.panels.F.set_yticks([100, 200, 300])
 
-    #G
+    # G
     plot_paramerror(fig.panels.G, fig.panels.H)
 
-    #I
+    # I
     plot_MSE(fig.panels.I)
-
 
     plt.savefig(current_dir / "figures" / "Fig7_raw.pdf", bbox_inches="tight")
     plt.show()
