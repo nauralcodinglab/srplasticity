@@ -4,3 +4,12 @@
 # Raw data and script related to analysis
 /data/raw/
 /scripts/data_processing/
+
+#compiled python modules.
+*.pyc
+
+#setuptools distribution folder
+/dist/
+
+#python egg metadata, regenerated from source files by setuptools
+/*.egg-info
