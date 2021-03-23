@@ -18,6 +18,12 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
 Implementation of a linear-nonlinear model of short-term plasticity as described in
 [Linear-Nonlinear Cascades Capture Synaptic Dynamics](https://www.biorxiv.org/content/early/2021/01/27/2020.06.04.133892).
 
+## Installation
+The srplasticity package can be installed directly using the following command: 
+pip install srplasticity==0.0.1
+
+All source files and additional files are hosted on Github at https://github.com/nauralcodinglab/srplasticity.git
+
 ## Repository Structure
 
 - The **srplasticity** package contains all source code and implements

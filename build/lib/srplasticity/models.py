@@ -1,5 +1,10 @@
 """
-srplasticity package initialisation file 
+models.py
+
+File to store importable pre-parameterized SRP models.
+should define classes (e.g. SRP_Pyr_Pv) that implement pre-parameterized versions of the SRP model
+(parsing the parameters defined in parameters.yaml)
+
 Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Naud
 
     This program is free software: you can redistribute it and/or modify
