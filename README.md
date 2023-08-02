@@ -16,7 +16,7 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
 # Spike Response Plasticity
 
 Implementation of a linear-nonlinear model of short-term plasticity as described in
-[Linear-Nonlinear Cascades Capture Synaptic Dynamics](https://www.biorxiv.org/content/early/2021/01/27/2020.06.04.133892).
+[Linear-Nonlinear Cascades Capture Synaptic Dynamics](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1008013).
 
 ## Installation
 The srplasticity package can be installed directly using the following command: 
@@ -32,13 +32,15 @@ the SRP model and the associated parameter inference.
 - The **scripts** directory contains the scripts to reproduce the figures in the manuscript
 - The **data** directory contains the data used in the manuscript figures and the use examples.
 
-## Preprint Citation
-@article{beninger2023functional,
-  title={Functional Subtypes of Synaptic Dynamics in Mouse and Human},
-  author={Beninger, John and Rossbroich, Julian and Toth, Katalin and Naud, Richard},
-  journal={bioRxiv},
-  pages={2023--05},
-  year={2023},
-  publisher={Cold Spring Harbor Laboratory}
+## Paper Citation
+@article{rossbroich2021linear,
+  title={Linear-nonlinear cascades capture synaptic dynamics},
+  author={Rossbroich, Julian and Trotter, Daniel and Beninger, John and T{\'o}th, Katalin and Naud, Richard},
+  journal={PLoS computational biology},
+  volume={17},
+  number={3},
+  pages={e1008013},
+  year={2021},
+  publisher={Public Library of Science San Francisco, CA USA}
 }
 
