@@ -399,6 +399,32 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
 
         plt.show()
 
+
+def plot_estimates(means):
+    fig, axis = plt.subplots()
+    xax = range(len(means))
+    axis.plot(range(1, len(xax) + 1), means, lw=1, color="#cc3311")
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    axis.set_ylabel("Predicted EPSC", labelpad=1, size=8)
+    axis.set_xticks(range(1, len(xax) + 1))
+    axis.set_xlabel("spike nr.", labelpad=1)
+    fig.set_dpi(1200)
+    fig.tight_layout()
+    # plt.savefig(f"estimates_plot.svg", transparent=True)
+
+
+def plot_spike_train(spiketrain):
+    fig, axis = plt.subplots()
+    axis.plot(spiketrain, lw=0.7, color='black')
+    axis.set_ylim(-0.005, 0.005)
+    axis.axis("off")
+
+    fig.set_dpi(1200)
+    fig.tight_layout()
+    # plt.savefig(f"spike_train_plot.svg", transparent=True)
+
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # FITTING FUNCTIONS
