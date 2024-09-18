@@ -176,7 +176,7 @@ def _objective_function(x, *args, phase=0):
     for key, ISIvec in stimulus_dict.items():
         mean_dict[key], sigma_dict[key], _ = model.run_ISIvec(ISIvec)
 
-    return mse_loss(target_dict, mean_dict)
+    return _total_loss_det(target_dict, mean_dict)
 
 #--------------------------------------------------------------------
 
