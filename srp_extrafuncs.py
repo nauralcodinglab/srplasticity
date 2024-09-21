@@ -180,7 +180,7 @@ def _objective_function(x, *args, phase=0):
 
 #--------------------------------------------------------------------
 
-def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus):
+def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300], bounds='default'):
     #placeholder sigmas for format, we don't use these for this version
     sigma_kernel_taus = [15, 100, 300]
     
@@ -188,7 +188,8 @@ def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus):
     best_loss = None
     best_vals = None
     for i in range(-6, 6):
-        bounds = _default_parameter_bounds(mu_kernel_taus, sigma_kernel_taus)  
+        if bounds == 'default':
+            bounds = _default_parameter_bounds(mu_kernel_taus, sigma_kernel_taus)
         bounds[0] = (i, i+1)
         srp_params, optimizer_res = fit_srp_model(stimulus_dict, target_dict, mu_kernel_taus, sigma_kernel_taus, bounds=bounds)
         
