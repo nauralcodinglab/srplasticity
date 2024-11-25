@@ -553,3 +553,11 @@ def get_poisson_ISIs(nspikes, rate):
     isis[isis < 2] = 2  # minimum 2ms refractory period
     return isis
 
+
+def compute_mses(stimulus_dict, target_dict, model):
+    mses = []
+    for protocol in stimulus_dict.keys():
+        means, _, _ = model.run_ISIvec(stimulus_dict[protocol])
+        for j in range(len(means)):
+            mses.append(np.square(np.nanmean(target_dict[protocol][:, j]) - means[j]))
+    return mses
