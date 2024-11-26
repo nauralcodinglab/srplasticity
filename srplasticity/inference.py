@@ -44,10 +44,12 @@ def _nll(y, mu, sigma):
     :param sigma: (np.array) set of stds
     """
 
+    #note, we add a very small value to avoid NaN values from taking the 
+    #log of zero
     return np.nansum(
         (
             (y * mu) / (sigma ** 2)
-            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2)))
+            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2))+ 1e-10)
             + np.log(gamma(mu ** 2 / sigma ** 2))
             + np.log(sigma ** 2 / mu)
         )

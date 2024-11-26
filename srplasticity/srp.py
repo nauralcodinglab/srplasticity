@@ -4,6 +4,7 @@ This module contains classes for the implementation of the SRP model.
 - deterministic SRP model
 - probabilistic SRP model
 - associated synaptic kernel (gaussian and multiexponential)
+- easySRP: a model with history dependent mean behaviour and fixed variance
 
 Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Naud
 
@@ -437,3 +438,114 @@ class ExpSRP(ProbSRP):
 
     def reset(self):
         pass
+
+#new version of model to handle Gaussian SD with exponential mu kernels 
+class easySRP(ExpSRP):
+    """
+    SRP model in which the mu kernel is parameterized by a set of amplitudes 
+    and respective exponential decay time constants. Variance is treated as
+    Gaussian with fixed SD centered on the predicted mean. 
+
+    This implementation of the SRP model is used for statistical inference of 
+    parameters and can be integrated between spikes for efficient numerical 
+    implementation.
+    """
+    
+    def __init__(
+        self,
+        mu_baseline=0,
+        mu_amps=[100, 600, 2000],
+        mu_taus=[15, 200, 300],
+        SD=1,
+        mu_scale=None,
+        **kwargs
+    ):
+        #dummy values for super-class
+        sigma_baseline = 0
+        sigma_amps = [0.1, 0.1, 0.1]
+        sigma_taus = [0.1, 0.1, 0.1]
+        
+        #build instance of super-class
+        super().__init__(
+                mu_baseline,
+                mu_amps,
+                mu_taus,
+                sigma_baseline,
+                sigma_amps,
+                sigma_taus,
+                mu_scale=mu_scale
+        )
+        
+        #save SD as attribute
+        self.SD = SD
+        self.rng = np.random.default_rng()
+        
+    #update sample method
+    def _sample(self, mean, sigma, ntrials):
+        """
+        Samples `ntrials` response amplitudes from a normal distribution 
+        given mean and sigma
+        
+        return: sampled efficacies
+        """
+
+        return self.rng(loc=mean, scale=sigma, 
+            size=(ntrials, len(np.atleast_1d(mean))))
+    
+    #override super-class method
+    def run_ISIvec(self, isivec, ntrials=1, fast=True, return_all=False, **kwargs):
+        """
+        Overrides the `run_ISIvec` method because the SRP model with
+        exponential decays can be integrated between spikes,
+        therefore speeding up computation in some cases
+        (if ISIs are large, i.e. presynaptic spikes are sparse)
+
+        return: efficacies
+        """
+
+        # Fast evaluation (integrate between spikes)
+        if fast:
+
+            state_mu = np.zeros(self._nexp_mu)  # assume kernels have decayed to zero
+            means = []
+
+            for spike, dt in enumerate(isivec):
+
+                if spike > 0:
+                    # At the first spike, read out baseline efficacy
+                    # At every following spike, integrate over the ISI and then read out efficacy
+                    state_mu = (state_mu + self._mu_amps) * np.exp(-dt / self._mu_taus)
+
+                # record value at spike
+                means.append(state_mu.sum())
+
+            # Apply nonlinear readout
+            means = self.nlin(np.array(means) + self.mu_baseline) * self.mu_scale
+
+            # Sample from gamma distribution
+            efficacies = self._sample(means, self.SD, ntrials)
+
+            return means, efficacies
+
+        # Standard evaluation (convolution of spiketrain with kernel)
+        else:
+            spiketrain = get_stimvec(isivec, **kwargs)
+            filtered_spiketrain = self.mu_baseline + _convolve_spiketrain_with_kernel(
+                spiketrain, self.mu_kernel
+            )
+            nonlinear_readout = self.nlin(filtered_spiketrain) * self.mu_scale
+            efficacy_train = nonlinear_readout * spiketrain
+            means = efficacy_train[np.where(spiketrain == 1)[0]]
+            efficacies = self._sample(means, self.SD, ntrials)
+    
+            if return_all:
+                return {
+                    "filtered_spiketrain": filtered_spiketrain,
+                    "nonlinear_readout": nonlinear_readout,
+                    "efficacytrain": efficacy_train,
+                    "means": means,
+                    "efficacies": efficacies,
+                }
+    
+            else:
+                return means, efficacies

@@ -1,71 +1,63 @@
 #import libraries for easy_fit_SRP
 import numpy as np
 import math
-from srplasticity.srp import ExpSRP
+from srplasticity.srp import easySRP
 from scipy.optimize import shgo
-
 
 #import libraries for other fitting and plotting functions
 import string
 import matplotlib.pyplot as plt
 from spiffyplots import MultiPanel
 #the functions in the import below are redefined in the code
-#from srplasticity.inference import _default_parameter_bounds, _convert_fitting_params
 
 #These functions support new functionality above and beyond the original
 #PLOS Computational Biology paper with the primary objective of increasing
 #ease of use for the package
 
-#fitting functions
 #--------------------------------------------------------------------
 
-def _convert_fitting_params(x, mu_taus, sigma_taus, mu_scale=None):
+def _EasySRP_dict_to_tuple(in_dict):
     """
-    Converts a vector of parameters for fitting `x` and independent variables
-    (time constants and mu scale) to a vector that can be passed an an input
-    argument to `ExpSRP` class
+    Convert dict of easySRP parameters to a standardized tuple
+    
+    :param in_dict: parameter dict 
+    :type: dict
+    
+    :return: tuple of easySRP parameters
     """
 
-    # Check length of time constants
-    nr_mu_exps = len(mu_taus)
-    nr_sigma_exps = len(sigma_taus)
-
-    # Unroll list of initial parameters
-    mu_baseline = x[0]
-    mu_amps = x[1 : 1 + nr_mu_exps]
-    sigma_baseline = x[1 + nr_mu_exps]
-    sigma_amps = x[2 + nr_mu_exps : 2 + nr_mu_exps + nr_sigma_exps]
-    sigma_scale = x[-1]
-
-    return (
-        mu_baseline,
-        mu_amps,
-        mu_taus,
-        sigma_baseline,
-        sigma_amps,
-        sigma_taus,
-        mu_scale,
-        sigma_scale,
-    )
+    return (in_dict["mu_baseline"], in_dict["mu_amps"], in_dict["mu_taus"], 
+            in_dict["SD"], in_dict["mu_scale"])
 
 #--------------------------------------------------------------------
 
-def _default_parameter_bounds(mu_taus, sigma_taus):
+def _EasySRP_tuple_to_dict(in_tuple):
+    """
+    Convert standardized tuple of easySRP parameters to a dict
+    
+    :param in_tuple: standardized tuple 
+    :type: tuple
+    
+    :return: Dict of easySRP parameters
+    """
+    return {"mu_baseline":in_tuple[0],
+            "mu_amps":in_tuple[1],
+            "mu_taus":in_tuple[2],
+            "SD":in_tuple[3],
+            "mu_scale":in_tuple[4]}
+
+#--------------------------------------------------------------------
+
+def _default_parameter_bounds():
     """ 
     returns default parameter boundaries for the SRP fitting procedure
+    These bounds assume mu_taus = [15ms, 200ms, 300ms]
     
-    Note 1: Adjusting these is a fruitful area for hyper-parameter tuning
-            if you struggle fitting your specific dataset
-            
-    Note 2: Sigma parameters are only relevant to some versions of the model 
+    :return: list of tuples containining easySRP parameter bonunds
     """
-    return [
-        (-6, 6),  # mu baseline
-        *[(-200, 200), (-1200, 1201), (-5000, 5000)], #timescales for mean dynamics
-        (-6, 6),  # sigma baseline
-        *[(-10 * tau, 10 * tau) for tau in sigma_taus],  # sigma amps
-        (0.001, 100),  # sigma scale
-    ]
+    return [(-6, 6),  # mu baseline
+            #timescales for mean dynamics
+            *[(-200, 200), (-1200, 1201), (-5000, 5000)]]
 
 #--------------------------------------------------------------------
 
@@ -73,125 +65,139 @@ def fit_srp_model(
     stimulus_dict,
     target_dict,
     mu_taus,
-    sigma_taus,
-    initial_mu_baseline = [0],
-    initial_mu=[0.01,0.01,0.01], #default  [0.1,0.1, 0.1]
-    initial_sigma_baseline=[-1.8],
-    initial_sigma=[0.1,0.1,0.1],
-    sigma_scale=[4],
     mu_scale=None,
     bounds="default",
     **kwargs
 ):
     """
     Fitting the SRP model to data using scipy.optimize.minimize
+    
     :param stimulus_dict: mapping of protocol keys to isi stimulation vectors
+    :type: dict
     :param target_dict: mapping of protocol keys to response matrices
+    :type: dict
     :param mu_taus: predefined time constants for mean kernel
-    :param sigma_taus: predefined time constants for sigma kernel
-    :param initial_*: initialisation value for minization for "*"
+    :type: list of ints
     :param mu_scale: mean scale, defaults to None for normalized data
-    :param mu_scale: sigma scale, placeholder for compatibility
+    :type: float
     :param bounds: bounds for parameters
+    :type: list of tuples (min_value, max_value)
     :param kwargs: keyword args to be passed to scipy.optimize.brute
+    
     :return: output of scipy.minimize using SHGO
     """
 
     mu_taus = np.atleast_1d(mu_taus)
-    sigma_taus = np.atleast_1d(sigma_taus)
 
     if bounds == "default":
-        bounds = _default_parameter_bounds(mu_taus, sigma_taus)  
+        bounds = _default_parameter_bounds()  
     
     #select mu params while holding sigmas fixed
     optimizer_res = shgo(
         _objective_function,
-        bounds=bounds[0:(len(mu_taus)+2)],
-        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, 
-              initial_sigma_baseline, initial_sigma),
+        bounds=bounds[0:(len(mu_taus)+1)],
+        args=(target_dict, stimulus_dict, mu_taus, mu_scale),
         iters=1,
         **kwargs
     )
     
     mse = optimizer_res.fun
     SD = math.pow(mse, 0.5)
-    
-    params = _convert_fitting_params(
-        list(optimizer_res.x)+initial_sigma_baseline+initial_sigma, mu_taus,
-        sigma_taus, mu_scale)
+    fitted_mu_baseline = optimizer_res.x[0]
+    fitted_mu_amps = optimizer_res.x[1:len(mu_taus)+1]
 
-    fitted_mu_baseline = params[0]
-    fitted_mu_amps = params[1]
-
-    output = (fitted_mu_baseline, fitted_mu_amps, mu_taus, SD, mu_scale)
+    easySRP_params = _EasySRP_tuple_to_dict(fitted_mu_baseline, fitted_mu_amps,
+                                            mu_taus, SD, mu_scale)
     
-    return output, optimizer_res
+    return easySRP_params, optimizer_res
 
 #--------------------------------------------------------------------
 
 def mse_loss(target_vals, mean_predicted):
     """
-    Stand in Mean Squared error for training loss in first phase
-    :param target_vals: (np.array) set of amplitudes
-    :param mean_predicted: (np.array) set of means
+    Mean Squared error for training loss
+    
+    :param target_vals: Dict of dict numpy arrays containing sets of amplitudes
+                        outer dict has keys for synapse inner dict has keys for
+                        protocol
+    :type target_vals: dict
+    :param mean_predicted: Model predict response means
+    :type mean_predicted: Numpy array
+    
+    :return: mean squared error 
     """
     loss = []
-    for key in target_vals.keys():
-        vals_by_amp = [[] for i in range(0, 5)] #2d list for vals by amp
-        for i in range(0, len(target_vals[key])):
-            run_arr = target_vals[key][i] #get amplitudes from a single run
-            run_err = []
-            
-            if not np.isscalar(run_arr):
-                for j in range(0, len(run_arr)):
-                    vals_by_amp[j].append(run_arr[j])
-                    run_err.append(math.pow((run_arr[j]-mean_predicted[key][j]), 2))
-                loss.append(run_err)
-    print("loss= "+str(np.nanmean(loss)))
-    return np.nanmean(loss)
+    for protocol, responses in target_vals.items():
+        loss.append(np.square(responses-mean_predicted[protocol]))
+        
+    return np.nanmean(np.concatenate(loss))
     
 #--------------------------------------------------------------------
 
-def _objective_function(x, *args, phase=0):
+def _objective_function(x, *args):
     """
     Objective function for scipy.optimize.minimize
-    :param x: parameters for SRP model as a list or array:
-                [mu_baseline, *mu_amps,
-                sigma_baseline, *sigma_amps, sigma_scale]
-    :param phase: 0 indicates fitting only mu amps and mu baseline for fixed 
-                    sigmas, 1 indicates fitting sigma params for fixed mu params
-    :param args: target dictionary and stimulus dictionary
+    
+    :param x: parameters for SRP model: [mu_baseline, *mu_amps]
+    :type x: 1-D array
+    :param args: target dictionary (dict of responses by protocol) 
+                    and stimulus dictionary (dict of stimuli by protocol)
+    :type args: tuple
+                
     :return: total loss to be minimized
     """
     # Unroll arguments
-    target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, fixed_baseline, fixed_amps = args
-
-    new_x = np.append(x, [fixed_baseline]) #add fixed sigma params
-    new_x = np.append(new_x, fixed_amps)
-    model = ExpSRP(*_convert_fitting_params(new_x, mu_taus, sigma_taus))
+    target_dict, stimulus_dict, mu_taus, mu_scale = args
+    
+    mu_baseline = x[0]
+    mu_amps = x[1:len(mu_taus)+1]
+    
+    model_params = {"mu_baseline":mu_baseline,
+                    "mu_amps":mu_amps,
+                    "mu_taus":mu_taus}
+    
+    model = easySRP(**model_params)
         
     # compute estimates
     mean_dict = {}
-    sigma_dict = {}
-    for key, ISIvec in stimulus_dict.items():
-        mean_dict[key], sigma_dict[key], _ = model.run_ISIvec(ISIvec)
 
-    return _total_loss_det(target_dict, mean_dict)
+    for key, ISIvec in stimulus_dict.items():
+        mean_dict[key], efficacies = model.run_ISIvec(ISIvec)
+
+    return mse_loss(target_dict, mean_dict)
 
 #--------------------------------------------------------------------
 
-def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300], bounds='default'):
-    #placeholder sigmas for format, we don't use these for this version
-    sigma_kernel_taus = [15, 100, 300]
+def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300],
+                 bounds='default'):
+    """
+    Introductory function to fit an SRP model with fixed Gaussian variance
+    and history dependent mean behaviour with the best "out of the box" 
+    performance by running multiple fits of constrained ranges of the 
+    mu_baseline parameter.
+    
+    :param stimulus_dict: Dict of different stimulus protocols
+    :type stimulus_dict: dict of numpy arrays
+    :param target_dict: Dict of numpy arrays containing observed responses
+                            with keys corresponding to different protocols 
+    :type target_dict:dict of numpy arrays
+    :param mu_kernel_taus: List of taus for exponential decays that make up
+                            mu_kernel
+    :type mu_kernel_taus: list of int
+    
+    :return: Tuple containing: Dict of best easySRP fitted model parameters,
+            corresponding fit loss
+    """
     
     #generate range of baseline bounds
     best_loss = None
     best_vals = None
     for i in range(-6, 6):
         if bounds == 'default':
-            bounds = _default_parameter_bounds(mu_kernel_taus, sigma_kernel_taus)
+            bounds = _default_parameter_bounds()
         bounds[0] = (i, i+1)
-        srp_params, optimizer_res = fit_srp_model(stimulus_dict, target_dict, mu_kernel_taus, sigma_kernel_taus, bounds=bounds)
+        srp_params, optimizer_res = fit_srp_model(stimulus_dict, target_dict, 
+                                                  mu_kernel_taus, bounds=bounds)
         
         if best_loss == None:
             best_loss = optimizer_res.fun
@@ -200,8 +206,6 @@ def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300], boun
             best_loss = optimizer_res.fun
             best_vals = srp_params
     return (best_vals, best_loss)
-
-#additional Functions
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
@@ -425,56 +429,6 @@ def plot_spike_train(spiketrain):
     fig.tight_layout()
     # plt.savefig(f"spike_train_plot.svg", transparent=True)
 
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-#
-# FITTING FUNCTIONS
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-
-def fit_srp_model_fssd(
-        stimulus_dict,
-        target_dict,
-        mu_taus,
-        mu_scale=None,
-        bounds="default",
-        loss="default",
-        **kwargs
-):
-    sigma_taus = mu_taus
-    initial_sigma_baseline = [-1.8]
-    initial_sigma = [0.1]
-
-    mu_taus = np.atleast_1d(mu_taus)
-    sigma_taus = np.atleast_1d(sigma_taus)
-    initial_sigma = initial_sigma * len(mu_taus)
-
-    if bounds == "default":
-        bounds = _default_parameter_bounds(mu_taus, sigma_taus)
-
-    optimizer_res = shgo(
-        _objective_function_det,
-        bounds=bounds[0:len(mu_taus) + 1],
-        args=(
-        target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss, initial_sigma_baseline, initial_sigma),
-        iters=1,
-        **kwargs
-    )
-
-    mse = optimizer_res.fun
-    SD = math.pow(mse, 0.5)
-
-    params = _convert_fitting_params(list(optimizer_res.x) + initial_sigma_baseline + initial_sigma, mu_taus,
-                                     sigma_taus, mu_scale)
-
-    fitted_mu_baseline = params[0]
-    fitted_mu_amps = params[1]
-
-    output = (fitted_mu_baseline, fitted_mu_amps, mu_taus, SD, mu_scale)
-
-    return output, params, optimizer_res
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # HELPER FUNCTIONS FOR FITTING PROCEDURE
@@ -501,6 +455,8 @@ def _total_loss_det(target_vals, mean_predicted):
                 for j in range(0, len(run_arr)):
                     run_err.append(math.pow((run_arr[j] - mean_predicted[key][j]), 2))
                 loss.append(run_err)
+    
+    #this section is unneccessary and confusing: numpy already flattens the array
     loss_2 = []
     for i in loss:
         for j in i:
@@ -509,37 +465,6 @@ def _total_loss_det(target_vals, mean_predicted):
     total_mse_loss = np.nanmean(loss_2)
 
     return total_mse_loss
-
-
-def _objective_function_det(x, *args):
-    """
-    Objective function for scipy.optimize.minimize
-
-    :param x: parameters for SRP model as a list or array:
-                [mu_baseline, *mu_amps,
-                sigma_baseline, *sigma_amps, sigma_scale]
-
-    :param args: target dictionary and stimulus dictionary
-    :return: total loss to be minimized
-    """
-    # Unroll arguments
-    target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss, initial_sigma_baseline, initial_sigma = args
-
-    new_x = np.append(x, [initial_sigma_baseline])
-    new_x = np.append(new_x, initial_sigma)
-
-    # Initialize model
-    model = ExpSRP(*_convert_fitting_params(new_x, mu_taus, sigma_taus, mu_scale))
-
-    # compute estimates
-    mean_dict = {}
-    sigma_dict = {}
-    for key, ISIvec in stimulus_dict.items():
-        mean_dict[key], sigma_dict[key], _ = model.run_ISIvec(ISIvec)
-
-    return _total_loss_det(target_dict, mean_dict)
-
-
 
 def get_poisson_ISIs(nspikes, rate):
     """
@@ -552,12 +477,3 @@ def get_poisson_ISIs(nspikes, rate):
     isis = np.random.exponential(scale=meanISI, size=nspikes).round(1)
     isis[isis < 2] = 2  # minimum 2ms refractory period
     return isis
-
-
-def compute_mses(stimulus_dict, target_dict, model):
-    mses = []
-    for protocol in stimulus_dict.keys():
-        means, _, _ = model.run_ISIvec(stimulus_dict[protocol])
-        for j in range(len(means)):
-            mses.append(np.square(np.nanmean(target_dict[protocol][:, j]) - means[j]))
-    return mses
