@@ -23,7 +23,7 @@ def readme():
         return f.read()
 
 setup(name='srplasticity',
-      version='0.0.1',
+      version='0.0.2',
       long_description=readme(),
       long_description_content_type='text/markdown',
       classifiers=[
@@ -37,7 +37,7 @@ setup(name='srplasticity',
       license='GPLv3',
       packages=['srplasticity'],
       install_requires=[
-          'numpy==1.19.2',
+          'numpy==1.20.0',
           'scipy==1.5.2',
           ],
       zip_safe=False)

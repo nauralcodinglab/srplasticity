@@ -479,7 +479,6 @@ class easySRP(ExpSRP):
         #save SD as attribute
         self.SD = SD
         self.rng = np.random.default_rng()
-        
     #update sample method
     def _sample(self, mean, sigma, ntrials):
         """
@@ -489,7 +488,7 @@ class easySRP(ExpSRP):
         return: sampled efficacies
         """
 
-        return self.rng(loc=mean, scale=sigma, 
+        return self.rng.normal(loc=mean, scale=sigma,
             size=(ntrials, len(np.atleast_1d(mean))))
     
     #override super-class method
