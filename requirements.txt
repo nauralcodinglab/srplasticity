@@ -1,5 +1,5 @@
 # General
-numpy >= 1.19.2
+numpy >= 1.20.0
 scipy >= 1.5.2
 
 # Plotting
