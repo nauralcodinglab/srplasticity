@@ -37,7 +37,7 @@ setup(name='srplasticity',
       license='GPLv3',
       packages=['srplasticity'],
       install_requires=[
-          'numpy==1.20.0',
-          'scipy==1.5.2',
+          'numpy>=1.20.0',
+          'scipy>=1.5.2',
           ],
       zip_safe=False)
