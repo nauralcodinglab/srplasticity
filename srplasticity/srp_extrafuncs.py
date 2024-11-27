@@ -130,7 +130,7 @@ def mse_loss(target_vals, mean_predicted):
     for protocol, responses in target_vals.items():
         loss.append(np.square(responses-mean_predicted[protocol]).flatten())
     final_loss = np.nanmean(np.concatenate(loss))
-    print("loss = "+str(final_loss))
+    # print("loss = "+str(final_loss))
     return final_loss
     
 #--------------------------------------------------------------------
