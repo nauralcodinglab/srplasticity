@@ -208,6 +208,7 @@ def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300],
             best_vals = srp_params
     return (best_vals, best_loss)
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # Plotting
@@ -286,6 +287,7 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.legend(frameon=False)
     axis.set_ylabel("norm. EPSC")
     axis.set_xlabel("spike nr.")
+
 
 def plot_mse_fig(axis, mses):
     axis.spines['top'].set_visible(False)
@@ -430,6 +432,7 @@ def plot_spike_train(spiketrain):
     fig.tight_layout()
     # plt.savefig(f"spike_train_plot.svg", transparent=True)
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # HELPER FUNCTIONS FOR FITTING PROCEDURE
@@ -467,6 +470,7 @@ def _total_loss_det(target_vals, mean_predicted):
 
     return total_mse_loss
 
+
 def get_poisson_ISIs(nspikes, rate):
     """
     poisson ISIs
@@ -478,3 +482,37 @@ def get_poisson_ISIs(nspikes, rate):
     isis = np.random.exponential(scale=meanISI, size=nspikes).round(1)
     isis[isis < 2] = 2  # minimum 2ms refractory period
     return isis
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# OTHER
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def norm_responses(target_dict):
+    first_spike_list = []
+    normed_all = {}
+    for protocol in target_dict.keys():
+        try:
+            divisors = target_dict[protocol][:, 0]
+            for i in range(0, len(divisors)):
+                first_spike_list.append(divisors[i])
+        except:
+            print("no entry")
+
+    if len(first_spike_list) > 0:
+        averaged_divisor = np.nansum(first_spike_list) / len(first_spike_list)
+        print(f"Averaged divisor: {averaged_divisor}")
+
+        for protocol in target_dict.keys():
+            normed_all[protocol] = []
+            for i in range(0, len(target_dict[protocol])):
+                normed_row = target_dict[protocol][i]
+                normed_row = normed_row / averaged_divisor
+                if len(normed_all[protocol]) == 0:
+                    normed_all[protocol] = normed_row
+                else:
+                    normed_all[protocol] = np.vstack([normed_all[protocol], normed_row])
+    return normed_all
