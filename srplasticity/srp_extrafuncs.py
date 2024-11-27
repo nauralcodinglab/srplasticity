@@ -378,7 +378,7 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
-            mean, sigma, _ = model.run_ISIvec(stimulus_dict[key])
+            mean, _ = model.run_ISIvec(stimulus_dict[key])
             xax = np.arange(1, len(mean) + 1)
 
             if type(target_dict[key][0]) is not np.float64:
