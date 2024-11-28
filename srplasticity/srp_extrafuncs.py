@@ -124,14 +124,18 @@ def mse_loss(target_vals, mean_predicted):
     :param mean_predicted: Model predict response means
     :type mean_predicted: Numpy array
     
-    :return: mean squared error 
+    :return: mean squared error and a list of mean squared errors per protocol
     """
     loss = []
+    loss_by_prot = {}
     for protocol, responses in target_vals.items():
-        loss.append(np.square(responses-mean_predicted[protocol]).flatten())
+        all_loss = np.square(responses-mean_predicted[protocol]).flatten()
+        loss.append(all_loss)
+        loss_by_prot[protocol] = all_loss
     final_loss = np.nanmean(np.concatenate(loss))
+    loss_list = [np.nanmean(i) for protocol, i in loss_by_prot.items()]
     # print("loss = "+str(final_loss))
-    return final_loss
+    return final_loss, loss_list
     
 #--------------------------------------------------------------------
 
@@ -165,7 +169,7 @@ def _objective_function(x, *args):
     for key, ISIvec in stimulus_dict.items():
         mean_dict[key], efficacies = model.run_ISIvec(ISIvec)
 
-    return mse_loss(target_dict, mean_dict)
+    return mse_loss(target_dict, mean_dict)[0]
 
 #--------------------------------------------------------------------
 
@@ -238,9 +242,6 @@ def add_figure_letters(axes, size=14):
         )
 
 
-plt.rc("font", family="calibri")
-
-
 def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
 
     mean, sigma, _ = model.run_ISIvec(stimulus_dict[name_protocol])
@@ -270,7 +271,6 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
     axis.spines['top'].set_visible(False)
@@ -306,7 +306,6 @@ def plot_mse_fig(axis, mses):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
@@ -351,7 +350,6 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
@@ -438,37 +436,6 @@ def plot_spike_train(spiketrain):
 # HELPER FUNCTIONS FOR FITTING PROCEDURE
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-
-def _total_loss_det(target_vals, mean_predicted):
-
-    """
-    Stand in Mean Squared error for training loss in first phase
-    :param target_vals: (np.array) set of amplitudes
-    :param mean_predicted: (np.array) set of means
-    """
-
-    loss = []
-
-    for key in target_vals.keys():
-        for i in range(0, len(target_vals[key])):
-            run_arr = target_vals[key][i]  # get amplitudes from a single run
-            run_err = []
-
-            if not np.isscalar(run_arr):
-                for j in range(0, len(run_arr)):
-                    run_err.append(math.pow((run_arr[j] - mean_predicted[key][j]), 2))
-                loss.append(run_err)
-    
-    #this section is unneccessary and confusing: numpy already flattens the array
-    loss_2 = []
-    for i in loss:
-        for j in i:
-            loss_2.append(j)
-
-    total_mse_loss = np.nanmean(loss_2)
-
-    return total_mse_loss
 
 
 def get_poisson_ISIs(nspikes, rate):
