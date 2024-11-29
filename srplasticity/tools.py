@@ -21,6 +21,7 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
 """
 
 import numpy as np
+import warnings
 from scipy.optimize import minimize
 
 
@@ -87,4 +88,6 @@ class MinimizeWrapper(object):
         self.kwargs = kwargs
 
     def __call__(self, x):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
         return self.minimizer(self.func, x0=x, args=self.args, **self.kwargs)
