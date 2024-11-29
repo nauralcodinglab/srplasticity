@@ -124,13 +124,14 @@ def mse_loss(target_vals, mean_predicted):
     :param mean_predicted: Model predict response means
     :type mean_predicted: Numpy array
     
-    :return: mean squared error and a list of mean squared errors per protocol
+    :return: mean squared error 
     """
-    loss_by_prot = {protocol: np.square(responses - mean_predicted[protocol]).flatten() for protocol, responses in target_vals.items()}
-    final_loss = np.nanmean(np.concatenate(list(loss_by_prot.values())))
-    loss_list = [np.nanmean(loss_by_prot[protocol]) for protocol in loss_by_prot]
-    # print("loss = "+str(final_loss))
-    return final_loss, loss_list
+    loss = []
+    for protocol, responses in target_vals.items():
+        loss.append(np.square(responses-mean_predicted[protocol]).flatten())
+    final_loss = np.nanmean(np.concatenate(loss))
+    print("loss = "+str(final_loss))
+    return final_loss
     
 #--------------------------------------------------------------------
 
@@ -164,7 +165,7 @@ def _objective_function(x, *args):
     for key, ISIvec in stimulus_dict.items():
         mean_dict[key], efficacies = model.run_ISIvec(ISIvec)
 
-    return mse_loss(target_dict, mean_dict)[0]
+    return mse_loss(target_dict, mean_dict)
 
 #--------------------------------------------------------------------
 
