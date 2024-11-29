@@ -124,14 +124,13 @@ def mse_loss(target_vals, mean_predicted):
     :param mean_predicted: Model predict response means
     :type mean_predicted: Numpy array
     
-    :return: mean squared error 
+    :return: mean squared error and a list of mean squared errors per protocol
     """
-    loss = []
-    for protocol, responses in target_vals.items():
-        loss.append(np.square(responses-mean_predicted[protocol]).flatten())
-    final_loss = np.nanmean(np.concatenate(loss))
-    print("loss = "+str(final_loss))
-    return final_loss
+    loss_by_prot = {protocol: np.square(responses - mean_predicted[protocol]).flatten() for protocol, responses in target_vals.items()}
+    final_loss = np.nanmean(np.concatenate(list(loss_by_prot.values())))
+    loss_list = [np.nanmean(loss_by_prot[protocol]) for protocol in loss_by_prot]
+    # print("loss = "+str(final_loss))
+    return final_loss, loss_list
     
 #--------------------------------------------------------------------
 
@@ -165,7 +164,7 @@ def _objective_function(x, *args):
     for key, ISIvec in stimulus_dict.items():
         mean_dict[key], efficacies = model.run_ISIvec(ISIvec)
 
-    return mse_loss(target_dict, mean_dict)
+    return mse_loss(target_dict, mean_dict)[0]
 
 #--------------------------------------------------------------------
 
@@ -208,6 +207,7 @@ def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300],
             best_vals = srp_params
     return (best_vals, best_loss)
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
 # Plotting
@@ -217,7 +217,7 @@ def easy_fit_srp(stimulus_dict, target_dict, mu_kernel_taus=[15, 200, 300],
 
 def add_figure_letters(axes, size=14):
     """
-    Function to add Letters enumerating multipanel figures.
+    Function to add Letters enumerating multipanel figures
 
     :param axes: list of matplotlib Axis objects to enumerate
     :param size: Font size
@@ -237,12 +237,26 @@ def add_figure_letters(axes, size=14):
         )
 
 
-plt.rc("font", family="calibri")
-
-
 def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
+    """
+    Plot the fit of the model to the target data for a given protocol
 
-    mean, sigma, _ = model.run_ISIvec(stimulus_dict[name_protocol])
+    :param axis: The axis on which to plot the data
+    :type axis: matplotlib.axes.Axes
+    :param model: The SRP model in which mu and sigma kernels are parameterized by a set of
+    amplitudes and respective exponential decay time constants
+    :type model: class: 'easySRP'
+    :param target_dict: Dictionary containing the target data for each protocol
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :type stimulus_dict: dict
+    :param name_protocol: The name of the protocol to be plotted
+    :type name_protocol: str
+    :param protocols: Dictionary containing protocol names for titles. Defaults to None
+    :type protocols: dict, optional
+    """
+
+    mean, _ = model.run_ISIvec(stimulus_dict[name_protocol])
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
@@ -269,7 +283,6 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
     axis.spines['top'].set_visible(False)
@@ -288,12 +301,19 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.set_xlabel("spike nr.")
 
 def plot_mse_fig(axis, mses):
+    """
+    Plot the Mean Squared Error (MSE) as a boxplot on the given axis
+
+    :param axis: The axis on which to plot the MSE boxplot
+    :type axis: matplotlib.axes.Axes
+    :param mses: A list or array of MSE values to be plotted
+    :type mses: list
+    """
+
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.boxplot(mses, medianprops = dict(color="#03719c", linewidth=1.25), showfliers=False)
     axis.set_ylabel("MSE", labelpad=8)
-    axis.set_ylim(-0.05, 0.3)
-    axis.set_yticks([0, 0.1, 0.2, 0.3])
     axis.set_xticks([])
 
     axis.text(
@@ -304,11 +324,29 @@ def plot_mse_fig(axis, mses):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
 def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
+    """
+    Generate a kernel based on given amplitudes and time constants.
+    This function sets up a timespan of 2000 ms with 0.1 ms time bins, generates kernels based on the provided
+    amplitudes and time constants, and returns the time values and corresponding kernel values.
+
+    :param mu_amps: List of amplitudes for the kernels
+    :type mu_amps: list
+    :param mu_taus: List of time constants for the kernels
+    :type mu_taus: list
+    :param mu_baseline: Baseline value to be added to the kernel. Defaults to None
+    :type mu_baseline: float, optional
+    :param dt: Time step for the kernel generation. Defaults to 1 ms
+    :type dt: float, optional
+
+    :return: A tuple containing:
+                - x_vals (np.ndarray): Array of time values
+                - y_vals (np.ndarray): Array of kernel values
+    """
+
     # set up timespan of 2000ms with 0.1ms time bins
     dt = 0.1  # ms per bin
     T = 2e3  # in ms
@@ -331,8 +369,26 @@ def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
     return (x_vals, y_vals)
 
 
-def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
-    # #047495
+def plot_kernel(axis, params, colour="#03719c"):
+    """
+    Plot the efficacy kernel on the given axis.
+
+    :param axis: The axis on which to plot the kernel
+    :type axis: matplotlib.axes.Axes
+    :param params: Dict of easySRP parameters
+    :type params: dict
+    :param colour: Colour of the kernel plot. Defaults to #03719c
+    :type colour: str, optional
+    """
+    try:
+        mu_taus = params["mu_taus"]
+        mu_amps = params["mu_amps"]
+        mu_baseline = params["mu_baseline"]
+    except (TypeError, KeyError):
+        raise ValueError("'params' must correspond to a dict of easySRP parameters")
+    except Exception as e:
+        raise ValueError(f"An unexpected error occurred: {e}")
+
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     kernel_x, kernel_y = gen_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
@@ -340,6 +396,7 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
     axis.set_ylabel("Efficacy kernel", labelpad=1)
+    axis.set_xlabel("Time (ms)", labelpad=1)
 
     axis.text(
         -0.15,
@@ -349,12 +406,44 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
-def plot_fig(model, mu_baseline, mu_amps, mu_taus, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names):
-    # fig = MultiPanel(grid=[(0, range(2)), (0, 2), (0, 3)], figsize=(9.5, 3.25))
+def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names):
+    """
+    Generate a multi-panel figure to visualize model fit, MSE, and efficacy kernel.
+
+    This function creates a multi-panel figure with three subplots:
+    1. The fit of the model to the target data for the chosen protocol.
+    2. A boxplot of the MSE values.
+    3. The efficacy kernel based on the provided amplitudes, time constants, and baseline value.
+
+    :param params: Dict of easySRP parameters
+    :type params: dict
+    :param target_dict: Dictionary containing the target data for each protocol
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :type stimulus_dict: dict
+    :param mses: List or array of Mean Squared Error (MSE) values
+    :type mses: list
+    :param chosen_protocol: The name of the protocol to be plotted
+    :type chosen_protocol: str
+    :param protocol_names: Dictionary containing protocol names for titles
+    :type protocol_names: dict
+    """
+
+
+    try:
+        mu_baseline = params["mu_baseline"]
+        mu_amps = params["mu_amps"]
+        mu_taus = params["mu_taus"]
+
+        model = easySRP(**params)
+    except (TypeError, KeyError):
+        raise ValueError("'params' must correspond to a dict of easySRP parameters")
+    except Exception as e:
+        raise ValueError(f"An unexpected error occurred: {e}")
+
     fig = MultiPanel(grid=[(range(2), range(2)), (0, 2), (1, 2)], figsize=(7, 3.75), wspace=0.5, hspace=0.2)
 
     plot_fit(fig.panels[0], model, target_dict, stimulus_dict, chosen_protocol, protocols=protocol_names)
@@ -367,8 +456,25 @@ def plot_fig(model, mu_baseline, mu_amps, mu_taus, target_dict, stimulus_dict, m
     plt.show()
 
 
-# Plot mean fit
-def plot_srp(model, target_dict, stimulus_dict, protocols=None):
+def plot_srp(params, target_dict, stimulus_dict, protocols=None):
+    """
+    Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
+
+    :param params: Dict of easySRP parameters
+    :type params: dict
+    :param target_dict: Dictionary containing the target data for each protocol
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :type stimulus_dict: dict
+    :param protocols: Dictionary containing protocol names for titles. Defaults to None
+    :type protocols: dict, optional
+    """
+    try:
+        model = easySRP(**params)
+    except (TypeError, KeyError):
+        raise ValueError("'params' must correspond to a dict of easySRP parameters")
+    except Exception as e:
+        raise ValueError(f"An unexpected error occurred: {e}")
 
     npanels = len(list(target_dict.keys()))
 
@@ -376,11 +482,13 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
-            mean, sigma, _ = model.run_ISIvec(stimulus_dict[key])
+            mean, _ = model.run_ISIvec(stimulus_dict[key])
+            lower_SD = mean - params["SD"]
+            upper_SD = mean + params["SD"]
             xax = np.arange(1, len(mean) + 1)
 
             if type(target_dict[key][0]) is not np.float64:
-                errors = np.nanstd(target_dict[key], 0) / 2
+                errors = np.nanstd(target_dict[key], 0)
 
                 fig.panels[ix].errorbar(
                     xax,
@@ -390,15 +498,21 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
                     marker="o",
                     markersize=2,
                     label="Data",
+                    capsize=2,
                 )
             fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
+            fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
             if protocols != None:
                 fig.panels[ix].set_title(protocols[key])
             else:
                 fig.panels[ix].set_title(key)
-            fig.panels[ix].set_xticks(xax)
+            if len(xax) <= 10:
+                fig.panels[ix].set_xticks(xax)
+            else:
+                ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
+                fig.panels[ix].set_xticks(ticks)
             fig.panels[ix].set_ylim(0.5, 9)
-            fig.panels[ix].set_yticks([1, 3, 5, 7, 9])
+            fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
         fig.panels[0].legend(frameon=False)
         fig.panels[0].set_ylabel("norm. EPSC amplitude")
@@ -406,75 +520,118 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
         plt.show()
 
 
-def plot_estimates(means):
+def plot_estimates(means, efficacies):
+    """
+    Plot sample estimates over time with the corresponding mean values.
+
+    :param means: A list of mean predicted responses
+    :type means: list
+    :param efficacies: A list of sample predicted responses
+    :type efficacies: list
+    """
+
     fig, axis = plt.subplots()
-    xax = range(len(means))
-    axis.plot(range(1, len(xax) + 1), means, lw=1, color="#cc3311")
+
+    if type(efficacies[0]) != np.float64 and type(efficacies[0]) != float:
+        xax = range(len(efficacies[0]))
+
+        for i in range(len(efficacies)):
+            if i == 0:
+                axis.plot(range(1, len(xax) + 1), efficacies[i], lw=1, color="#cc3311", label="Samples")
+            else:
+                axis.plot(range(1, len(xax) + 1), efficacies[i], lw=1, color="#cc3311")
+
+        axis.plot(range(1, len(xax) + 1), means, lw=1.2, color="black", label='Means')
+
+    else:
+        xax = range(len(efficacies))
+        axis.plot(range(1, len(xax) + 1), efficacies, lw=1, color="#cc3311", label="Samples")
+        axis.plot(range(1, len(xax) + 1), means, lw=1.2, color="black", label='Means')
+
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.set_ylabel("Predicted EPSC", labelpad=1, size=8)
     axis.set_xticks(range(1, len(xax) + 1))
     axis.set_xlabel("spike nr.", labelpad=1)
-    fig.set_dpi(1200)
-    fig.tight_layout()
-    # plt.savefig(f"estimates_plot.svg", transparent=True)
+    fig.legend(frameon=False)
 
 
 def plot_spike_train(spiketrain):
+    """
+    Plot a spike train
+
+    :param spiketrain: A binary stimulation vector from a
+                        vector with ISI intervals to be plotted
+    :type spiketrain: Numpy array
+    """
+
     fig, axis = plt.subplots()
     axis.plot(spiketrain, lw=0.7, color='black')
-    axis.set_ylim(-0.005, 0.005)
+    axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
 
-    fig.set_dpi(1200)
-    fig.tight_layout()
-    # plt.savefig(f"spike_train_plot.svg", transparent=True)
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
-# HELPER FUNCTIONS FOR FITTING PROCEDURE
+# HELPER FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-
-def _total_loss_det(target_vals, mean_predicted):
-
-    """
-    Stand in Mean Squared error for training loss in first phase
-    :param target_vals: (np.array) set of amplitudes
-    :param mean_predicted: (np.array) set of means
-    """
-
-    loss = []
-
-    for key in target_vals.keys():
-        for i in range(0, len(target_vals[key])):
-            run_arr = target_vals[key][i]  # get amplitudes from a single run
-            run_err = []
-
-            if not np.isscalar(run_arr):
-                for j in range(0, len(run_arr)):
-                    run_err.append(math.pow((run_arr[j] - mean_predicted[key][j]), 2))
-                loss.append(run_err)
-    
-    #this section is unneccessary and confusing: numpy already flattens the array
-    loss_2 = []
-    for i in loss:
-        for j in i:
-            loss_2.append(j)
-
-    total_mse_loss = np.nanmean(loss_2)
-
-    return total_mse_loss
 
 def get_poisson_ISIs(nspikes, rate):
     """
-    poisson ISIs
+    Poisson ISIs
+
     :param nspikes: number of spikes
+    :type nspikes: int
     :param rate: firing rate in Hz
+    :type rate: int
     """
 
     meanISI = int(1000 / rate)
     isis = np.random.exponential(scale=meanISI, size=nspikes).round(1)
     isis[isis < 2] = 2  # minimum 2ms refractory period
     return isis
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PREPROCESSING
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def norm_responses(target_dict):
+    """
+    Normalizes the responses in the `target_dict` by averaging the first responses values,
+    then dividing all responses by this average value.
+
+    :param target_dict: A dictionary where keys are protocol names and values are NumPy arrays of the responses
+    :type target_dict: dict
+
+    :return: A dictionary in which keys are protocol names and values are NumPy arrays of the normalized responses
+    """
+    first_spike_list = []
+    normed_all = {}
+    for protocol in target_dict.keys():
+        try:
+            divisors = target_dict[protocol][:, 0]
+            for i in range(0, len(divisors)):
+                first_spike_list.append(divisors[i])
+        except:
+            print("no entry")
+
+    if len(first_spike_list) > 0:
+        averaged_divisor = np.nansum(first_spike_list) / len(first_spike_list)
+        print(f"Averaged divisor: {averaged_divisor}")
+
+        for protocol in target_dict.keys():
+            normed_all[protocol] = []
+            for i in range(0, len(target_dict[protocol])):
+                normed_row = target_dict[protocol][i]
+                normed_row = normed_row / averaged_divisor
+                if len(normed_all[protocol]) == 0:
+                    normed_all[protocol] = normed_row
+                else:
+                    normed_all[protocol] = np.vstack([normed_all[protocol], normed_row])
+    return normed_all
