@@ -1,4 +1,6 @@
 # General
+pandas
+scikit-learn
 numpy >= 1.24.4
 scipy >= 1.5.2
 
