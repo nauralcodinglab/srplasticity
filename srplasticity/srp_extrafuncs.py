@@ -243,20 +243,23 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
 
     :param axis: The axis on which to plot the data
     :type axis: matplotlib.axes.Axes
-    :param model: The SRP model in which mu and sigma kernels are parameterized by a set of
-    amplitudes and respective exponential decay time constants
+    :param model: The SRP model with history dependent mean behaviour and fixed variance
     :type model: class: 'easySRP'
-    :param target_dict: Dictionary containing the target data for each protocol
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
     :type target_dict: dict
-    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                            and values are lists of ISIs
     :type stimulus_dict: dict
     :param name_protocol: The name of the protocol to be plotted
     :type name_protocol: str
-    :param protocols: Dictionary containing protocol names for titles. Defaults to None
+    :param protocols: Dictionary where keys are protocol names (str) 
+                      and values are their descriptive names (str). 
+                      Defaults to None
     :type protocols: dict, optional
     """
 
-    mean, _ = model.run_ISIvec(stimulus_dict[name_protocol])
+    mean, efficacies = model.run_ISIvec(stimulus_dict[name_protocol])
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
@@ -284,6 +287,8 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
         weight="bold",
         usetex=False,
     )
+
+    plt.show()
 
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
@@ -326,8 +331,10 @@ def plot_mse_fig(axis, mses):
         usetex=False,
     )
 
+    plt.show()
 
-def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
+
+def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=0.1):
     """
     Generate a kernel based on given amplitudes and time constants.
     This function sets up a timespan of 2000 ms with 0.1 ms time bins, generates kernels based on the provided
@@ -375,7 +382,12 @@ def plot_kernel(axis, params, colour="#03719c"):
 
     :param axis: The axis on which to plot the kernel
     :type axis: matplotlib.axes.Axes
-    :param params: Dict of easySRP parameters
+    :param params: Dict of easySRP parameters:
+                   {"mu_baseline": float,
+                    "mu_amps": numpy array,
+                    "mu_taus": numpy array,
+                    "SD": float,
+                    "mu_scale": int, float or None}
     :type params: dict
     :param colour: Colour of the kernel plot. Defaults to #03719c
     :type colour: str, optional
@@ -408,8 +420,10 @@ def plot_kernel(axis, params, colour="#03719c"):
         usetex=False,
     )
 
+    plt.show()
 
-def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names):
+
+def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names=None):
     """
     Generate a multi-panel figure to visualize model fit, MSE, and efficacy kernel.
 
@@ -418,18 +432,27 @@ def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol
     2. A boxplot of the MSE values.
     3. The efficacy kernel based on the provided amplitudes, time constants, and baseline value.
 
-    :param params: Dict of easySRP parameters
+    :param params: Dict of easySRP parameters:
+                   {"mu_baseline": float,
+                    "mu_amps": numpy array,
+                    "mu_taus": numpy array,
+                    "SD": float,
+                    "mu_scale": int, float or None}
     :type params: dict
-    :param target_dict: Dictionary containing the target data for each protocol
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
     :type target_dict: dict
-    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                        and values are lists of ISIs
     :type stimulus_dict: dict
     :param mses: List or array of Mean Squared Error (MSE) values
     :type mses: list
     :param chosen_protocol: The name of the protocol to be plotted
     :type chosen_protocol: str
-    :param protocol_names: Dictionary containing protocol names for titles
-    :type protocol_names: dict
+    :param protocol_names: Dictionary where keys are protocol names (str)
+                           and values are their descriptive names (str). 
+                           Defaults to None
+    :type protocol_names: dict, optional
     """
 
 
@@ -460,13 +483,22 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None):
     """
     Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
 
-    :param params: Dict of easySRP parameters
+    :param params: Dict of easySRP parameters:
+                    {"mu_baseline": float,
+                     "mu_amps": numpy array,
+                     "mu_taus": numpy array,
+                     "SD": float,
+                     "mu_scale": int, float or None}
     :type params: dict
-    :param target_dict: Dictionary containing the target data for each protocol
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
     :type target_dict: dict
-    :param stimulus_dict: Dictionary containing the stimulus data for each protocol
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                          and values are lists of ISIs
     :type stimulus_dict: dict
-    :param protocols: Dictionary containing protocol names for titles. Defaults to None
+    :param protocols: Dictionary where keys are protocol names (str)
+                      and values are their descriptive names (str). 
+                      Defaults to None
     :type protocols: dict, optional
     """
     try:
@@ -482,7 +514,7 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None):
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
-            mean, _ = model.run_ISIvec(stimulus_dict[key])
+            mean, efficacies = model.run_ISIvec(stimulus_dict[key])
             lower_SD = mean - params["SD"]
             upper_SD = mean + params["SD"]
             xax = np.arange(1, len(mean) + 1)
@@ -555,6 +587,8 @@ def plot_estimates(means, efficacies):
     axis.set_xlabel("spike nr.", labelpad=1)
     fig.legend(frameon=False)
 
+    plt.show()
+
 
 def plot_spike_train(spiketrain):
     """
@@ -569,6 +603,8 @@ def plot_spike_train(spiketrain):
     axis.plot(spiketrain, lw=0.7, color='black')
     axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
+
+    plt.show(
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -606,32 +642,27 @@ def norm_responses(target_dict):
     Normalizes the responses in the `target_dict` by averaging the first responses values,
     then dividing all responses by this average value.
 
-    :param target_dict: A dictionary where keys are protocol names and values are NumPy arrays of the responses
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
     :type target_dict: dict
 
-    :return: A dictionary in which keys are protocol names and values are NumPy arrays of the normalized responses
+    :return: A dictionary in which keys are protocol names 
+             and values are NumPy arrays of the normalized responses
     """
     first_spike_list = []
     normed_all = {}
     for protocol in target_dict.keys():
         try:
             divisors = target_dict[protocol][:, 0]
-            for i in range(0, len(divisors)):
-                first_spike_list.append(divisors[i])
+            first_spike_list.extend(divisors)
         except:
             print("no entry")
 
     if len(first_spike_list) > 0:
-        averaged_divisor = np.nansum(first_spike_list) / len(first_spike_list)
+        averaged_divisor = np.nanmean(first_spike_list)
         print(f"Averaged divisor: {averaged_divisor}")
 
-        for protocol in target_dict.keys():
-            normed_all[protocol] = []
-            for i in range(0, len(target_dict[protocol])):
-                normed_row = target_dict[protocol][i]
-                normed_row = normed_row / averaged_divisor
-                if len(normed_all[protocol]) == 0:
-                    normed_all[protocol] = normed_row
-                else:
-                    normed_all[protocol] = np.vstack([normed_all[protocol], normed_row])
+        for protocol, data in target_dict.items(): 
+          normed_all[protocol] = data / averaged_divisor
+            
     return normed_all
