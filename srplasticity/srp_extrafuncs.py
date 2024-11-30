@@ -288,8 +288,6 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
         usetex=False,
     )
 
-    plt.show()
-
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.plot(xax, mean, color="#cc3311", label="SRP model")
@@ -304,6 +302,8 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.legend(frameon=False)
     axis.set_ylabel("norm. EPSC")
     axis.set_xlabel("spike nr.")
+
+    plt.show()
 
 def plot_mse_fig(axis, mses):
     """
