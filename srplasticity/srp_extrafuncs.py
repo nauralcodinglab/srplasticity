@@ -334,10 +334,10 @@ def plot_mse_fig(axis, mses):
     plt.show()
 
 
-def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=0.1):
+def _arrange_kernel(mu_amps, mu_taus, mu_baseline=None, dt=0.1):
     """
-    Generate a kernel based on given amplitudes and time constants.
-    This function sets up a timespan of 2000 ms with 0.1 ms time bins, generates kernels based on the provided
+    Generate and arrage a kernel to be plotted by the "plot_kernel" function.
+    This function sets up a timespan of 2000 ms with 0.1 ms time bins, generate a kernel based on the provided
     amplitudes and time constants, and returns the time values and corresponding kernel values.
 
     :param mu_amps: List of amplitudes for the kernels
@@ -403,7 +403,7 @@ def plot_kernel(axis, params, colour="#03719c"):
 
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    kernel_x, kernel_y = gen_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
+    kernel_x, kernel_y = _arrange_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
@@ -659,7 +659,7 @@ def norm_responses(target_dict):
             print("no entry")
 
     if len(first_spike_list) > 0:
-        averaged_divisor = np.nanmean(first_spike_list)
+        averaged_divisor = np.nansum(first_spike_list) / len(first_spike_list)
         print(f"Averaged divisor: {averaged_divisor}")
 
         for protocol, data in target_dict.items(): 
