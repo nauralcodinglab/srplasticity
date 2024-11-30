@@ -604,7 +604,7 @@ def plot_spike_train(spiketrain):
     axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
 
-    plt.show(
+    plt.show()
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
