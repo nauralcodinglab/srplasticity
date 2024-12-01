@@ -259,7 +259,7 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     :type protocols: dict, optional
     """
 
-    mean, efficacies = model.run_ISIvec(stimulus_dict[name_protocol])
+    mean = model.run_ISIvec(stimulus_dict[name_protocol])[0]
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
