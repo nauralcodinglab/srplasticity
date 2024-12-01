@@ -470,7 +470,7 @@ def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol
     plt.show()
 
 
-def plot_srp(params, target_dict, stimulus_dict, protocols=None, srp_model='easySRP'):
+def plot_srp(params, target_dict, stimulus_dict, protocols=None):
     """
     Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
 
@@ -500,23 +500,16 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None, srp_model='easy
                       and values are their descriptive names (str). 
                       Defaults to None
     :type protocols: dict, optional
-    :param srp_model: Name of the model class to be instantiated. 
-                      Defaults to 'easySRP'
-    :type srp_model: str, optional
     """
-    if srp_model != 'easySRP' and srp_model != 'ExpSRP':
-      raise ValueError("srp_model must be easySRP or ExpSRP")
     
     try:
-      if srp_model == 'easySRP':
+      if "SD" in list(params.keys()):
         model = easySRP(**params)
-        params["SD"]
       else:
         model = ExpSRP(**params)
         params["sigma_baseline"]
     except (TypeError, KeyError):
-        raise ValueError("'params' must be a dictionary of either easySRP or ExpSRP parameters, but not both. "
-                        "Ensure that the provided 'params' dictionary aligns with the selected 'srp_model'.")
+        raise ValueError("'params' must be a dictionary of either easySRP or ExpSRP parameters.")
     except Exception as e:
         raise ValueError(f"An unexpected error occurred: {e}")
 
@@ -526,7 +519,7 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None, srp_model='easy
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
-          if srp_model == 'easySRP':
+          if isinstance(model, easySRP):
             mean, efficacies = model.run_ISIvec(stimulus_dict[key])
             lower_SD = mean - params["SD"]
             upper_SD = mean + params["SD"]
