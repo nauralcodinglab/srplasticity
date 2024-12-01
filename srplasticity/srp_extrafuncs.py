@@ -87,6 +87,11 @@ def fit_srp_model(
     :return: output of scipy.minimize using SHGO
     """
 
+    for protocol, data in target_dict.items():
+      if data.shape[1] != len(stimulus_dict[protocol]):
+        raise ValueError(f"Mismatch in dimensions between target_dict and "
+                         f" stimulus_dict for protocol {protocol}.")
+
     mu_taus = np.atleast_1d(mu_taus)
 
     if bounds == "default":
