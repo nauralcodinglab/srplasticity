@@ -376,34 +376,25 @@ def _arrange_kernel(mu_amps, mu_taus, mu_baseline=None, dt=0.1):
     return (x_vals, y_vals)
 
 
-def plot_kernel(axis, params, colour="#03719c"):
+def plot_kernel(axis, taus, amps, baseline, colour="#03719c"):
     """
     Plot the efficacy kernel on the given axis.
 
     :param axis: The axis on which to plot the kernel
     :type axis: matplotlib.axes.Axes
-    :param params: Dict of easySRP parameters:
-                   {"mu_baseline": float,
-                    "mu_amps": numpy array,
-                    "mu_taus": numpy array,
-                    "SD": float,
-                    "mu_scale": int, float or None}
-    :type params: dict
+    :param taus: The time constants of the exponentials that compose the kernel
+    :type taus: numpy array
+    :param amps: The amplitudes of the exponentials that compose the kernel
+    :type amps: numpy array
+    :param baseline: The baseline parameter of the kernel
+    :type baseline: float
     :param colour: Colour of the kernel plot. Defaults to #03719c
     :type colour: str, optional
     """
-    try:
-        mu_taus = params["mu_taus"]
-        mu_amps = params["mu_amps"]
-        mu_baseline = params["mu_baseline"]
-    except (TypeError, KeyError):
-        raise ValueError("'params' must correspond to a dict of easySRP parameters")
-    except Exception as e:
-        raise ValueError(f"An unexpected error occurred: {e}")
 
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    kernel_x, kernel_y = _arrange_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
+    kernel_x, kernel_y = _arrange_kernel(amps, taus, mu_baseline=baseline)
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
@@ -479,7 +470,7 @@ def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol
     plt.show()
 
 
-def plot_srp(params, target_dict, stimulus_dict, protocols=None):
+def plot_srp(params, target_dict, stimulus_dict, protocols=None, srp_model='easySRP'):
     """
     Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
 
@@ -500,11 +491,23 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None):
                       and values are their descriptive names (str). 
                       Defaults to None
     :type protocols: dict, optional
+    :param srp_model: Name of the model class to be instantiated. 
+                      Defaults to 'easySRP'
+    :type srp_model: str, optional
     """
+    if srp_model != 'easySRP' and srp_model != 'ExpSRP':
+      raise ValueError("srp_model must be easySRP or ExpSRP")
+    
     try:
+      if srp_model == 'easySRP':
         model = easySRP(**params)
+        params["SD"]
+      else:
+        model = ExpSRP(**params)
+        params["sigma_baseline"]
     except (TypeError, KeyError):
-        raise ValueError("'params' must correspond to a dict of easySRP parameters")
+        raise ValueError("'params' must be a dictionary of either easySRP or ExpSRP parameters, but not both. "
+                        "Ensure that the provided 'params' dictionary aligns with the selected 'srp_model'.")
     except Exception as e:
         raise ValueError(f"An unexpected error occurred: {e}")
 
@@ -514,37 +517,43 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None):
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
+          if srp_model == 'easySRP':
             mean, efficacies = model.run_ISIvec(stimulus_dict[key])
             lower_SD = mean - params["SD"]
             upper_SD = mean + params["SD"]
-            xax = np.arange(1, len(mean) + 1)
+          else:
+            mean, sigma, efficacies = model.run_ISIvec(stimulus_dict[key])
+            lower_SD = mean - sigma
+            upper_SD = mean + sigma
+          
+          xax = np.arange(1, len(mean) + 1)
 
-            if type(target_dict[key][0]) is not np.float64:
-                errors = np.nanstd(target_dict[key], 0)
+          if type(target_dict[key][0]) is not np.float64:
+              errors = np.nanstd(target_dict[key], 0)
 
-                fig.panels[ix].errorbar(
-                    xax,
-                    np.nanmean(target_dict[key], 0),
-                    yerr=errors,
-                    color="black",
-                    marker="o",
-                    markersize=2,
-                    label="Data",
-                    capsize=2,
-                )
-            fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
-            fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
-            if protocols != None:
-                fig.panels[ix].set_title(protocols[key])
-            else:
-                fig.panels[ix].set_title(key)
-            if len(xax) <= 10:
-                fig.panels[ix].set_xticks(xax)
-            else:
-                ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
-                fig.panels[ix].set_xticks(ticks)
-            fig.panels[ix].set_ylim(0.5, 9)
-            fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+              fig.panels[ix].errorbar(
+                  xax,
+                  np.nanmean(target_dict[key], 0),
+                  yerr=errors,
+                  color="black",
+                  marker="o",
+                  markersize=2,
+                  label="Data",
+                  capsize=2,
+              )
+          fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
+          fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
+          if protocols != None:
+              fig.panels[ix].set_title(protocols[key])
+          else:
+              fig.panels[ix].set_title(key)
+          if len(xax) <= 10:
+              fig.panels[ix].set_xticks(xax)
+          else:
+              ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
+              fig.panels[ix].set_xticks(ticks)
+          fig.panels[ix].set_ylim(0.5, 9)
+          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
         fig.panels[0].legend(frameon=False)
         fig.panels[0].set_ylabel("norm. EPSC amplitude")
