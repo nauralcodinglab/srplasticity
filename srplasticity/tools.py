@@ -20,7 +20,6 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import warnings
 import numpy as np
 from scipy.optimize import minimize
 
