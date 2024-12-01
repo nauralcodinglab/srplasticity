@@ -398,7 +398,7 @@ def plot_kernel(axis, taus, amps, baseline, colour="#03719c"):
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
-    axis.set_ylabel("Efficacy kernel", labelpad=1)
+    axis.set_ylabel("Kernel", labelpad=1)
     axis.set_xlabel("Time (ms)", labelpad=1)
 
     axis.text(
@@ -479,7 +479,16 @@ def plot_srp(params, target_dict, stimulus_dict, protocols=None, srp_model='easy
                      "mu_amps": numpy array,
                      "mu_taus": numpy array,
                      "SD": float,
-                     "mu_scale": int, float or None}
+                     "mu_scale": int, float or None} with 'easySRP'
+                     OR
+                     {"mu_baseline": float,
+                     "mu_amps": numpy array,
+                     "mu_taus": numpy array,
+                     "sigma_baseline": float,
+                     "sigma_amps": numpy array,
+                     "sigma_taus": numpy array,
+                     "mu_scale": int, float or None,
+                     "sigma_scale": int, float or None} with 'ExpSRP
     :type params: dict
     :param target_dict: Dictionary where keys are protocol names 
                         and values are NumPy arrays of the responses
