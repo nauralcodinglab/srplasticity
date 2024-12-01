@@ -1,7 +1,7 @@
 #import libraries for easy_fit_SRP
 import numpy as np
 import math
-from srplasticity.srp import easySRP
+from srplasticity.srp import easySRP, ExpSRP
 from scipy.optimize import shgo
 
 #import libraries for other fitting and plotting functions
