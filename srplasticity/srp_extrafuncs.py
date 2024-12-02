@@ -241,8 +241,28 @@ plt.rc("font", family="calibri")
 
 
 def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
+    """
+    Plot the fit of the model to the target data for a given protocol
 
-    mean, sigma, _ = model.run_ISIvec(stimulus_dict[name_protocol])
+    :param axis: The axis on which to plot the data
+    :type axis: matplotlib.axes.Axes
+    :param model: The SRP model with history dependent mean behaviour and fixed variance
+    :type model: class: 'easySRP'
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                            and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param name_protocol: The name of the protocol to be plotted
+    :type name_protocol: str
+    :param protocols: Dictionary where keys are protocol names (str) 
+                      and values are their descriptive names (str). 
+                      Defaults to None
+    :type protocols: dict, optional
+    """
+
+    mean = model.run_ISIvec(stimulus_dict[name_protocol])[0]
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
@@ -286,6 +306,8 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.legend(frameon=False)
     axis.set_ylabel("norm. EPSC")
     axis.set_xlabel("spike nr.")
+
+    plt.show()
 
 def plot_mse_fig(axis, mses):
     axis.spines['top'].set_visible(False)
