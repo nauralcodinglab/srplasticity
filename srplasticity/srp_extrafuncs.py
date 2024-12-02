@@ -308,7 +308,26 @@ def plot_mse_fig(axis, mses):
     )
 
 
-def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
+def _arrange_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
+    """
+    Generate and arrage a kernel to be plotted by the "plot_kernel" function.
+    This function sets up a timespan of 2000 ms with 0.1 ms time bins, generate a kernel based on the provided
+    amplitudes and time constants, and returns the time values and corresponding kernel values.
+
+    :param mu_amps: List of amplitudes for the kernels
+    :type mu_amps: list
+    :param mu_taus: List of time constants for the kernels
+    :type mu_taus: list
+    :param mu_baseline: Baseline value to be added to the kernel. Defaults to None
+    :type mu_baseline: float, optional
+    :param dt: Time step for the kernel generation. Defaults to 1 ms
+    :type dt: float, optional
+
+    :return: A tuple containing:
+                - x_vals (np.ndarray): Array of time values
+                - y_vals (np.ndarray): Array of kernel values
+    """
+    
     # set up timespan of 2000ms with 0.1ms time bins
     dt = 0.1  # ms per bin
     T = 2e3  # in ms
@@ -335,7 +354,7 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
     # #047495
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    kernel_x, kernel_y = gen_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
+    kernel_x, kernel_y = _arrange_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
