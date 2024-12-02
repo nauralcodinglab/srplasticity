@@ -288,12 +288,19 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.set_xlabel("spike nr.")
 
 def plot_mse_fig(axis, mses):
+    """
+    Plot the Mean Squared Error (MSE) as a boxplot on the given axis
+
+    :param axis: The axis on which to plot the MSE boxplot
+    :type axis: matplotlib.axes.Axes
+    :param mses: A list or array of MSE values to be plotted
+    :type mses: list
+    """
+    
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.boxplot(mses, medianprops = dict(color="#03719c", linewidth=1.25), showfliers=False)
     axis.set_ylabel("MSE", labelpad=8)
-    axis.set_ylim(-0.05, 0.3)
-    axis.set_yticks([0, 0.1, 0.2, 0.3])
     axis.set_xticks([])
 
     axis.text(
@@ -306,6 +313,8 @@ def plot_mse_fig(axis, mses):
         usetex=False,
         family="calibri",
     )
+
+    plt.show()
 
 
 def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
