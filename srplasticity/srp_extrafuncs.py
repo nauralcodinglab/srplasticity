@@ -237,9 +237,6 @@ def add_figure_letters(axes, size=14):
         )
 
 
-plt.rc("font", family="calibri")
-
-
 def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
 
     mean, sigma, _ = model.run_ISIvec(stimulus_dict[name_protocol])
@@ -269,7 +266,6 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
     axis.spines['top'].set_visible(False)
@@ -304,7 +300,6 @@ def plot_mse_fig(axis, mses):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
@@ -349,7 +344,6 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
         size=11,
         weight="bold",
         usetex=False,
-        family="calibri",
     )
 
 
