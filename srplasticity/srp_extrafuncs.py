@@ -341,15 +341,31 @@ def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
     return (x_vals, y_vals)
 
 
-def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
+def plot_kernel(axis, taus, amps, baseline, colour="#03719c"):
+    """
+    Plot an efficacy or variance kernel on the given axis.
+
+    :param axis: The axis on which to plot the kernel
+    :type axis: matplotlib.axes.Axes
+    :param taus: The time constants of the exponentials that compose the kernel
+    :type taus: numpy array
+    :param amps: The amplitudes of the exponentials that compose the kernel
+    :type amps: numpy array
+    :param baseline: The baseline parameter of the kernel
+    :type baseline: float
+    :param colour: Colour of the kernel plot. Defaults to #03719c
+    :type colour: str, optional
+    """
+    
     # #047495
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    kernel_x, kernel_y = gen_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
+    kernel_x, kernel_y = gen_kernel(amps, taus, mu_baseline=baseline)
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylim(-2.5, -0.5)
     axis.set_yticks([-2.5, -1.5, -0.5])
-    axis.set_ylabel("Efficacy kernel", labelpad=1)
+    axis.set_ylabel("Kernel", labelpad=1)
+    axis.set_xlabel("Time (ms)", labelpad=1)
 
     axis.text(
         -0.15,
@@ -360,6 +376,8 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
         weight="bold",
         usetex=False,
     )
+
+    plt.show()
 
 
 def plot_fig(model, mu_baseline, mu_amps, mu_taus, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names):
