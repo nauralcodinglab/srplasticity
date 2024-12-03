@@ -481,51 +481,65 @@ def plot_spike_train(spiketrain):
     fig.tight_layout()
     # plt.savefig(f"spike_train_plot.svg", transparent=True)
 
+
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
-# HELPER FUNCTIONS FOR FITTING PROCEDURE
+# HELPER FUNCTIONS
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-
-def _total_loss_det(target_vals, mean_predicted):
-
-    """
-    Stand in Mean Squared error for training loss in first phase
-    :param target_vals: (np.array) set of amplitudes
-    :param mean_predicted: (np.array) set of means
-    """
-
-    loss = []
-
-    for key in target_vals.keys():
-        for i in range(0, len(target_vals[key])):
-            run_arr = target_vals[key][i]  # get amplitudes from a single run
-            run_err = []
-
-            if not np.isscalar(run_arr):
-                for j in range(0, len(run_arr)):
-                    run_err.append(math.pow((run_arr[j] - mean_predicted[key][j]), 2))
-                loss.append(run_err)
-    
-    #this section is unneccessary and confusing: numpy already flattens the array
-    loss_2 = []
-    for i in loss:
-        for j in i:
-            loss_2.append(j)
-
-    total_mse_loss = np.nanmean(loss_2)
-
-    return total_mse_loss
 
 def get_poisson_ISIs(nspikes, rate):
     """
-    poisson ISIs
+    Poisson ISIs
+    
     :param nspikes: number of spikes
+    :type nspikes: int
     :param rate: firing rate in Hz
+    :type rate: int
+
+    :return: NumPy array of interspikes intervals
     """
 
     meanISI = int(1000 / rate)
     isis = np.random.exponential(scale=meanISI, size=nspikes).round(1)
     isis[isis < 2] = 2  # minimum 2ms refractory period
     return isis
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PREPROCESSING
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def norm_responses(target_dict):
+    """
+    Normalizes the responses in the `target_dict` by averaging the first responses values,
+    then dividing all responses by this average value.
+
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+
+    :return: A dictionary in which keys are protocol names 
+             and values are NumPy arrays of the normalized responses
+    """
+    first_spike_list = []
+    normed_all = {}
+    for protocol in target_dict.keys():
+        try:
+            divisors = target_dict[protocol][:, 0]
+            first_spike_list.extend(divisors)
+        except:
+            print("no entry")
+
+    if len(first_spike_list) > 0:
+        averaged_divisor = np.nanmean(first_spike_list)
+        print(f"Averaged divisor: {averaged_divisor}")
+
+        for protocol, data in target_dict.items(): 
+          normed_all[protocol] = data / averaged_divisor
+            
+    return normed_all
