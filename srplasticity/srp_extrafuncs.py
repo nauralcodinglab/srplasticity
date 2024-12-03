@@ -362,8 +362,50 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
     )
 
 
-def plot_fig(model, mu_baseline, mu_amps, mu_taus, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names):
-    # fig = MultiPanel(grid=[(0, range(2)), (0, 2), (0, 3)], figsize=(9.5, 3.25))
+def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names=None):
+    """
+    Generate a multi-panel figure to visualize model fit, MSE, and efficacy kernel.
+
+    This function creates a multi-panel figure with three subplots:
+    1. The fit of the model to the target data for the chosen protocol.
+    2. A boxplot of the MSE values.
+    3. The efficacy kernel based on the provided amplitudes, time constants, and baseline value.
+
+    :param params: Dict of easySRP parameters:
+                   {"mu_baseline": float,
+                    "mu_amps": numpy array,
+                    "mu_taus": numpy array,
+                    "SD": float,
+                    "mu_scale": int, float or None}
+    :type params: dict
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                        and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param mses: List or array of Mean Squared Error (MSE) values
+    :type mses: list
+    :param chosen_protocol: The name of the protocol to be plotted
+    :type chosen_protocol: str
+    :param protocol_names: Dictionary where keys are protocol names (str)
+                           and values are their descriptive names (str). 
+                           Defaults to None
+    :type protocol_names: dict, optional
+    """
+
+
+    try:
+        mu_baseline = params["mu_baseline"]
+        mu_amps = params["mu_amps"]
+        mu_taus = params["mu_taus"]
+
+        model = easySRP(**params)
+    except (TypeError, KeyError):
+        raise ValueError("'params' must correspond to a dict of easySRP parameters")
+    except Exception as e:
+        raise ValueError(f"An unexpected error occurred: {e}")
+
     fig = MultiPanel(grid=[(range(2), range(2)), (0, 2), (1, 2)], figsize=(7, 3.75), wspace=0.5, hspace=0.2)
 
     plot_fit(fig.panels[0], model, target_dict, stimulus_dict, chosen_protocol, protocols=protocol_names)
