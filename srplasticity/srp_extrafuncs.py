@@ -457,18 +457,44 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
         plt.show()
 
 
-def plot_estimates(means):
+def plot_estimates(means, efficacies):
+    """
+    Plot sample estimates over time with the corresponding mean values.
+
+    :param means: A list of mean predicted responses
+    :type means: list
+    :param efficacies: A list of sample predicted responses
+    :type efficacies: list
+    """
+
     fig, axis = plt.subplots()
-    xax = range(len(means))
-    axis.plot(range(1, len(xax) + 1), means, lw=1, color="#cc3311")
+
+    if type(efficacies[0]) != np.float64 and type(efficacies[0]) != float:
+        xax = range(len(efficacies[0]))
+
+        for i in range(len(efficacies)):
+            if i == 0:
+                axis.plot(range(1, len(xax) + 1), efficacies[i], lw=1, color="#cc3311", label="Samples")
+            else:
+                axis.plot(range(1, len(xax) + 1), efficacies[i], lw=1, color="#cc3311")
+
+    else:
+        xax = range(len(efficacies))
+        axis.plot(range(1, len(xax) + 1), efficacies, lw=1, color="#cc3311", label="Samples")
+
+    axis.plot(range(1, len(xax) + 1), means, lw=1.2, color="black", label='Means')
+
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.set_ylabel("Predicted EPSC", labelpad=1, size=8)
     axis.set_xticks(range(1, len(xax) + 1))
     axis.set_xlabel("spike nr.", labelpad=1)
-    fig.set_dpi(1200)
-    fig.tight_layout()
-    # plt.savefig(f"estimates_plot.svg", transparent=True)
+    if len(xax) > 10:
+        ticks = np.arange(1, len(means) + 1, math.ceil(len(means) / 10))
+        axis.set_xticks(ticks)
+    fig.legend(frameon=False)
+
+    plt.show()
 
 
 def plot_spike_train(spiketrain):
