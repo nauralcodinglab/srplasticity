@@ -472,14 +472,21 @@ def plot_estimates(means):
 
 
 def plot_spike_train(spiketrain):
+    """
+    Plot a spike train
+
+    :param spiketrain: A binary stimulation vector from a
+                        vector with ISI intervals to be plotted
+    :type spiketrain: Numpy array
+    """
+
     fig, axis = plt.subplots()
     axis.plot(spiketrain, lw=0.7, color='black')
-    axis.set_ylim(-0.005, 0.005)
+    axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
 
-    fig.set_dpi(1200)
-    fig.tight_layout()
-    # plt.savefig(f"spike_train_plot.svg", transparent=True)
+    plt.show()
+
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #
