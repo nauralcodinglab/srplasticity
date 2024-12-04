@@ -318,38 +318,29 @@ def plot_mse_fig(axis, mses):
     plt.show()
 
 
-def gen_kernel(mu_amps, mu_taus, mu_baseline=None, dt=1):
-    # set up timespan of 2000ms with 0.1ms time bins
-    dt = 0.1  # ms per bin
-    T = 2e3  # in ms
+def plot_kernel_easySRP(axis, model, colour="#03719c"):
+    """
+    Plot the efficacy kernel on the given axis.
 
-    t = np.arange(0, T, dt)
-    spktr = np.zeros(t.shape)
-    spktr[[4000]] = 1 #set one spike at 400ms
+    :param axis: The axis on which to plot the kernel
+    :type axis: matplotlib.axes.Axes
+    :param model: The SRP model with history dependent mean behaviour and fixed variance
+    :type model: class: 'easySRP'
+    :param colour: Colour of the kernel plot. Defaults to #03719c
+    :type colour: str, optional
+    """
 
-    kernels = [1 / tauk * np.exp(-t / tauk) for tauk in mu_taus] #generate mu kernels wrt time
+    if model.__class__.__name__ != 'easySRP':
+        raise ValueError("'model' must be an instance of easySRP")
+    
+    kernel_y = model.run_ISIvec([200, 801], fast=False, return_all=True)["filtered_spiketrain"][:10000]
+    kernel_x = np.arange(0, 2000, 0.1)[:10000] - 200
 
-    if mu_baseline == None:
-        mu_baseline = 0
-
-    # y_vals = np.roll(mu_amps[0] * kernels[0][:10000] + mu_amps[1] * kernels[1][:10000]+ mu_amps[2] * kernels[2][:10000] + mu_baseline, 2000)
-    y_vals = np.roll(sum([mu_amps[i] * kernels[i][:10000] for i in range(len(mu_taus))]) + mu_baseline, 2000)
-    x_vals = t[:10000] - 200
-    #set pre-spike baseline, figure out why this isn't always the case
-    for i in range(0, 2000):
-        y_vals[i] = mu_baseline
-    return (x_vals, y_vals)
-
-
-def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
-    # #047495
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    kernel_x, kernel_y = gen_kernel(mu_amps, mu_taus, mu_baseline=mu_baseline)
     axis.plot(kernel_x, kernel_y, color=colour)
-    axis.set_ylim(-2.5, -0.5)
-    axis.set_yticks([-2.5, -1.5, -0.5])
-    axis.set_ylabel("Efficacy kernel", labelpad=1)
+    axis.set_ylabel("Kernel", labelpad=1)
+    axis.set_xlabel("Time (ms)", labelpad=1)
 
     axis.text(
         -0.15,
@@ -360,6 +351,8 @@ def plot_kernel(axis, mu_taus, mu_amps, mu_baseline, colour="#03719c"):
         weight="bold",
         usetex=False,
     )
+
+    plt.show()
 
 
 def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names=None):
