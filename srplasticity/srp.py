@@ -434,7 +434,33 @@ class ExpSRP(ProbSRP):
 
         # Standard evaluation (convolution of spiketrain with kernel)
         else:
-            return super().run_ISIvec(isivec, **kwargs)
+            spiketrain = get_stimvec(isivec, **kwargs)
+
+            filtered_spiketrain_mu = self.mu_baseline + _convolve_spiketrain_with_kernel(
+                spiketrain, self.mu_kernel)
+
+            filtered_spiketrain_sigma = self.sigma_baseline + _convolve_spiketrain_with_kernel(
+                spiketrain, self.sigma_kernel)
+            
+            nonlinear_readout_mu = self.nlin(filtered_spiketrain_mu) * self.mu_scale
+            nonlinear_readout_sigma = self.nlin(filtered_spiketrain_sigma) * self.sigma_scale
+            efficacy_train = nonlinear_readout_mu * spiketrain
+            means = efficacy_train[np.where(spiketrain == 1)[0]]
+            efficacies = self._sample(nonlinear_readout_mu, nonlinear_readout_sigma, ntrials)
+    
+            if return_all:
+                return {
+                    "filtered_spiketrain_mu": filtered_spiketrain_mu,
+                    "filtered_spiketrain_sigma": filtered_spiketrain_sigma,
+                    "nonlinear_readout": nonlinear_readout_mu,
+                    "nonlinear_readout": nonlinear_readout_sigma,
+                    "efficacytrain": efficacy_train,
+                    "means": means,
+                    "efficacies": efficacies,
+                }
+    
+            else:
+                return means, efficacies
 
     def reset(self):
         pass
