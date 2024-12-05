@@ -8,6 +8,8 @@ from scipy.optimize import shgo
 import string
 import matplotlib.pyplot as plt
 from spiffyplots import MultiPanel
+from srplasticity.srp import _refactor_gamma_parameters
+import scipy.stats as stats
 #the functions in the import below are redefined in the code
 
 #These functions support new functionality above and beyond the original
@@ -411,8 +413,34 @@ def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol
     plt.show()
 
 
-# Plot mean fit
-def plot_srp(model, target_dict, stimulus_dict, protocols=None):
+def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
+    """
+    Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
+
+    :param params: Dict of easySRP parameters:
+                    {"mu_baseline": float,
+                     "mu_amps": numpy array,
+                     "mu_taus": numpy array,
+                     "SD": float,
+                     "mu_scale": int, float or None}
+    :type params: dict
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                          and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param protocols: Dictionary where keys are protocol names (str)
+                      and values are their descriptive names (str). 
+                      Defaults to None
+    :type protocols: dict, optional
+    """
+    
+    try:
+      params["SD"]
+      model = easySRP(**params)
+    except:
+      raise ValueError("'params' must be a dictionary of easySRP parameters.")
 
     npanels = len(list(target_dict.keys()))
 
@@ -420,29 +448,134 @@ def plot_srp(model, target_dict, stimulus_dict, protocols=None):
         fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
-            mean, sigma, _ = model.run_ISIvec(stimulus_dict[key])
-            xax = np.arange(1, len(mean) + 1)
+          mean, efficacies = model.run_ISIvec(stimulus_dict[key])
+          lower_SEM = mean - params["SD"] / len(target_dict[key]) ** 0.5
+          upper_SEM = mean + params["SD"] / len(target_dict[key]) ** 0.5
 
-            if type(target_dict[key][0]) is not np.float64:
-                errors = np.nanstd(target_dict[key], 0) / 2
+          xax = np.arange(1, len(mean) + 1)
+          
+          fig.panels[ix].fill_between(xax, lower_SEM, upper_SEM, color="xkcd:light grey", label="SEM")
+          fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
 
-                fig.panels[ix].errorbar(
-                    xax,
-                    np.nanmean(target_dict[key], 0),
-                    yerr=errors,
-                    color="black",
-                    marker="o",
-                    markersize=2,
-                    label="Data",
-                )
-            fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
-            if protocols != None:
-                fig.panels[ix].set_title(protocols[key])
+          if type(target_dict[key][0]) is not np.float64:
+
+              errors = np.nanstd(target_dict[key], 0) / len(target_dict[key]) ** 0.5
+
+              fig.panels[ix].errorbar(
+                  xax,
+                  np.nanmean(target_dict[key], 0),
+                  yerr=errors,
+                  color="black",
+                  marker="o",
+                  markersize=2,
+                  label="Data",
+                  capsize=2,
+              )
+
+          if protocols != None:
+              fig.panels[ix].set_title(protocols[key])
+          else:
+              fig.panels[ix].set_title(key)
+
+          if len(xax) <= 10:
+              fig.panels[ix].set_xticks(xax)
+          else:
+              ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
+              fig.panels[ix].set_xticks(ticks)
+
+          fig.panels[ix].set_ylim(0.5, 9)
+          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+
+        fig.panels[0].legend(frameon=False)
+        fig.panels[0].set_ylabel("norm. EPSC amplitude")
+
+        plt.show()
+
+
+def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
+    """
+    Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
+
+    :param params: Dict of ExpSRP parameters:
+                     {"mu_baseline": float,
+                     "mu_amps": numpy array,
+                     "mu_taus": numpy array,
+                     "sigma_baseline": float,
+                     "sigma_amps": numpy array,
+                     "sigma_taus": numpy array,
+                     "mu_scale": int, float or None,
+                     "sigma_scale": int, float or None}
+    :type params: dict
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                          and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param protocols: Dictionary where keys are protocol names (str)
+                      and values are their descriptive names (str). 
+                      Defaults to None
+    :type protocols: dict, optional
+    """
+    
+    try:
+      params["sigma_baseline"]
+      model = ExpSRP(**params)
+    except (TypeError, KeyError):
+        raise ValueError("'params' must be a dictionary of ExpSRP parameters.")
+
+    npanels = len(list(target_dict.keys()))
+
+    if npanels > 1:
+        fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
+
+        for ix, key in enumerate(list(target_dict.keys())):
+
+          mean, sigma, efficacies = model.run_ISIvec(stimulus_dict[key])
+          shape, scale = _refactor_gamma_parameters(mean, sigma)
+          xax = np.arange(1, len(mean) + 1)
+
+          segments = []
+          for i in np.arange(0.025, 0.98, 0.01):
+            bound = stats.gamma.ppf(i, shape, scale=scale)
+            segments.append([bound])
+
+          cmap = plt.cm.Greys
+          colors = cmap(np.arange(10, 151, 3))
+
+          for i in range(47):
+            if i == 46:
+              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
             else:
-                fig.panels[ix].set_title(key)
-            fig.panels[ix].set_xticks(xax)
-            fig.panels[ix].set_ylim(0.5, 9)
-            fig.panels[ix].set_yticks([1, 3, 5, 7, 9])
+              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
+
+          if type(target_dict[key][0]) is not np.float64:
+              errors = np.nanstd(target_dict[key], 0)
+
+              fig.panels[ix].errorbar(
+                  xax,
+                  np.nanmean(target_dict[key], 0),
+                  yerr=errors,
+                  color="black",
+                  marker="o",
+                  markersize=2,
+                  label="Data",
+                  capsize=2,
+              )
+
+          if protocols != None:
+              fig.panels[ix].set_title(protocols[key])
+          else:
+              fig.panels[ix].set_title(key)
+            
+          if len(xax) <= 10:
+              fig.panels[ix].set_xticks(xax)
+          else:
+              ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
+              fig.panels[ix].set_xticks(ticks)
+            
+          fig.panels[ix].set_ylim(0.5, 9)
+          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
         fig.panels[0].legend(frameon=False)
         fig.panels[0].set_ylabel("norm. EPSC amplitude")
