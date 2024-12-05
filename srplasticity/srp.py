@@ -386,7 +386,7 @@ class ExpSRP(ProbSRP):
         self._nexp_mu = len(self._mu_amps)
         self._nexp_sigma = len(self._sigma_amps)
 
-    def run_ISIvec(self, isivec, ntrials=1, fast=True, **kwargs):
+    def run_ISIvec(self, isivec, ntrials=1, fast=True, return_all=False, **kwargs):
         """
         Overrides the `run_ISIvec` method because the SRP model with
         exponential decays can be integrated between spikes,
