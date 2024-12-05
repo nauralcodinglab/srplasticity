@@ -23,6 +23,7 @@ from scipy.optimize import minimize
 from scipy._lib._util import MapWrapper
 from srplasticity.srp import ExpSRP
 from srplasticity.tools import MinimizeWrapper
+from warnings import catch_warnings, warn
 
 # Multiprocessing
 import copyreg
@@ -35,7 +36,7 @@ import types
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def _nll(y, mu, sigma):
+def _nll(y, mu, sigma, offset=1e-8):
     """
     Negative Log Likelihood
 
@@ -46,12 +47,23 @@ def _nll(y, mu, sigma):
 
     #note, we add a very small value to avoid NaN values from taking the 
     #log of zero
+    #here we also ensure the offset does not create a value of zero
+    offsets_arr = np.full(mu.shape, offset)
+    offset_mu = np.where(np.isclose(mu, -1*offsets_arr, atol=1e-8), 2*offsets_arr, offsets_arr) 
+    
+    #check that the gamma function does not produce values above the 64bit
+    #maximum float value replace otherwise
+    gamma_in = gamma(mu ** 2 / (sigma ** 2 + offsets_arr))   
+    gamma_out = np.where(np.isinf(gamma_in), 1e46, gamma_in)
+
+    #the function takes a nansum which means it will discount any entries 
+    #containing non-numeric values
     return np.nansum(
         (
-            (y * mu) / (sigma ** 2)
-            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2))+ 1e-10)
-            + np.log(gamma(mu ** 2 / sigma ** 2))
-            + np.log(sigma ** 2 / mu)
+            (y * mu) / (sigma ** 2 + offsets_arr)
+            - ((mu ** 2 / (sigma ** 2 + offsets_arr)) - 1) * np.log(y * (mu / (sigma ** 2 + offsets_arr))+ offsets_arr)
+            + np.log(gamma_out) 
+            + np.log((sigma ** 2 / (mu + offset_mu)) + offsets_arr)
         )
     )
 
@@ -432,9 +444,21 @@ def fit_srp_model_gridsearch(
 
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
     # iterate over input arrays, possibly in parallel
+    #with catch_warnings(record=True) as w:
     with MapWrapper(pool=workers) as mapper:
         listres = np.array(list(mapper(wrapped_minimizer, starts)))
-
+    """ 
+        if w:
+            print(A runtime warning has been produced by the optimizer,
+                  this is usually because NaN values were present in the input.
+                  By default values for NaNs are ignored during fitting, if you
+                  have enough defined values, then the model will still likely be 
+                  properly trained. If you expect these values and this behaviour 
+                  is acceptible, then you can simply ignore this message.
+                  The full set of warnings is below:)
+            print(w)
+    """
+    
     fval = np.array(
         [res["fun"] if res["success"] is True else np.nan for res in listres]
     )
