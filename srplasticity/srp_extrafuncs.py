@@ -8,7 +8,7 @@ from scipy.optimize import shgo
 import string
 import matplotlib.pyplot as plt
 from spiffyplots import MultiPanel
-from srplasticity.srp import _refactor_gamma_parameters
+from srplasticity.srp import ExpSRP, _refactor_gamma_parameters
 import scipy.stats as stats
 #the functions in the import below are redefined in the code
 
