@@ -357,6 +357,47 @@ def plot_kernel_easySRP(axis, model, colour="#03719c"):
     plt.show()
 
 
+def plot_kernel_ExpSRP(axis1, axis2, model, colour_mu="#03719c", colour_sigma="#cc3311"):
+    """
+    Plot the efficacy and variance kernels on the given axes.
+
+    :param axis1: The axis on which to plot the efficacy kernel
+    :type axis1: matplotlib.axes.Axes
+    :param axis2: The axis on which to plot the variance kernel
+    :type axis2: matplotlib.axes.Axes
+    :param model: The SRP model with history dependent mean and variance behaviours
+    :type model: class: 'ExpSRP'
+    :param colour_mu: Colour of the efficacy kernel plot. Defaults to #03719c
+    :type colour_mu: str, optional
+    :param colour_sigma: Colour of the variance kernel plot. Defaults to #cc3311
+    :type colour_mu: str, optional
+    """
+
+    if model.__class__.__name__ != 'ExpSRP':
+        raise ValueError("'model' must be an instance of ExpSRP")
+
+    mu_kernel_y = model.run_ISIvec([200, 801], fast=False, return_all=True)["filtered_spiketrain_mu"][:10000]
+    sigma_kernel_y = model.run_ISIvec([200, 801], fast=False, return_all=True)["filtered_spiketrain_sigma"][:10000]
+ 
+    kernel_x = np.arange(0, 2000, 0.1)[:10000] - 200
+
+    axis1.set_title("Efficacy Kernel")
+    axis1.spines['top'].set_visible(False)
+    axis1.spines['right'].set_visible(False)
+    axis1.plot(kernel_x, mu_kernel_y, color=colour_mu)
+    axis1.set_ylabel("Kernel", labelpad=1)
+    axis1.set_xlabel("Time (ms)", labelpad=1)
+
+    axis2.set_title("Variance Kernel")
+    axis2.spines['top'].set_visible(False)
+    axis2.spines['right'].set_visible(False)
+    axis2.plot(kernel_x, sigma_kernel_y, color=colour_sigma)
+    axis2.set_ylabel("Kernel", labelpad=1)
+    axis2.set_xlabel("Time (ms)", labelpad=1)
+
+    plt.show()
+
+
 def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names=None):
     """
     Generate a multi-panel figure to visualize model fit, MSE, and efficacy kernel.
