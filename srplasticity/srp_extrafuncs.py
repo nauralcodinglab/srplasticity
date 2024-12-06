@@ -394,7 +394,8 @@ def plot_mse_fig(axis, mses):
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.boxplot(mses, medianprops = dict(color="#03719c", linewidth=1.25), showfliers=False)
-    axis.set_ylabel("MSE", labelpad=8)
+    axis.set_ylabel("MSE", labelpad=8, fontweight="bold")
+    axis.set_xlabel("All Protocols", fontweight="bold")
     axis.set_xticks([])
 
     plt.show()
@@ -421,8 +422,12 @@ def plot_kernel_easySRP(axis, model, colour="#03719c"):
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
     axis.plot(kernel_x, kernel_y, color=colour)
-    axis.set_ylabel("Kernel", labelpad=1)
-    axis.set_xlabel("Time (ms)", labelpad=1)
+    axis.set_ylabel("Kernel", labelpad=1, fontweight="bold")
+    axis.set_xlabel("Time (ms)", labelpad=1, fontweight="bold")
+    axis.set_ylim(-2.5, -0.5)
+    axis.set_yticks([-2.5, -1.5, -0.5])
+    
+    plt.tight_layout()
 
     plt.show()
 
@@ -451,19 +456,25 @@ def plot_kernel_ExpSRP(axis1, axis2, model, colour_mu="#03719c", colour_sigma="#
  
     kernel_x = np.arange(0, 2000, 0.1)[:10000] - 200
 
-    axis1.set_title("Efficacy Kernel")
+    axis1.set_title("Efficacy Kernel", fontweight="bold")
     axis1.spines['top'].set_visible(False)
     axis1.spines['right'].set_visible(False)
     axis1.plot(kernel_x, mu_kernel_y, color=colour_mu)
-    axis1.set_ylabel("Kernel", labelpad=1)
-    axis1.set_xlabel("Time (ms)", labelpad=1)
+    axis1.set_ylabel("Kernel", labelpad=1, fontweight="bold")
+    axis1.set_xlabel("Time (ms)", labelpad=1, fontweight="bold")
+    axis1.set_ylim(-2.5, 0.5)
+    axis1.set_yticks([-2.5, -1.5, -0.5, 0.5])
 
-    axis2.set_title("Variance Kernel")
+    axis2.set_title("Variance Kernel", fontweight="bold")
     axis2.spines['top'].set_visible(False)
     axis2.spines['right'].set_visible(False)
     axis2.plot(kernel_x, sigma_kernel_y, color=colour_sigma)
-    axis2.set_ylabel("Kernel", labelpad=1)
-    axis2.set_xlabel("Time (ms)", labelpad=1)
+    axis2.set_ylabel("Kernel", labelpad=1, fontweight="bold")
+    axis2.set_xlabel("Time (ms)", labelpad=1, fontweight="bold")
+    axis2.set_ylim(-2.5, 0.5)
+    axis2.set_yticks([-2.5, -1.5, -0.5, 0.5])
+
+    plt.tight_layout()
 
     plt.show()
 
@@ -556,7 +567,9 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
     npanels = len(list(target_dict.keys()))
 
     if npanels > 1:
-        fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
+        fig, ([ax1, ax2, ax3, ax4], [ax5, ax6, ax7, ax8]) = plt.subplots(2, 4, figsize=(10, 6))
+
+        axes = (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8)
 
         for ix, key in enumerate(list(target_dict.keys())):
           mean, efficacies = model.run_ISIvec(stimulus_dict[key])
@@ -565,14 +578,14 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
 
           xax = np.arange(1, len(mean) + 1)
           
-          fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
-          fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
+          axes[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
+          axes[ix].plot(xax, mean, color="#cc3311", label="SRP model")
 
           if type(target_dict[key][0]) is not np.float64:
 
               errors = np.nanstd(target_dict[key], 0)
 
-              fig.panels[ix].errorbar(
+              axes[ix].errorbar(
                   xax,
                   np.nanmean(target_dict[key], 0),
                   yerr=errors,
@@ -584,21 +597,26 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
               )
 
           if protocols != None:
-              fig.panels[ix].set_title(protocols[key])
+              axes[ix].set_title(protocols[key], fontweight='bold')
           else:
-              fig.panels[ix].set_title(key)
+              axes[ix].set_title(key)
 
           if len(xax) <= 10:
-              fig.panels[ix].set_xticks(xax)
+              axes[ix].set_xticks(xax)
           else:
               ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
-              fig.panels[ix].set_xticks(ticks)
+              axes[ix].set_xticks(ticks)
 
-          fig.panels[ix].set_ylim(0.5, 9)
-          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+          axes[ix].set_ylim(0.5, 9)
+          axes[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
-        fig.panels[0].legend(frameon=False)
-        fig.panels[0].set_ylabel("norm. EPSC amplitude")
+        ax1.legend(frameon=False, fontsize=10)
+        ax1.set_ylabel("norm. EPSC amplitude", fontweight='bold')
+        ax5.set_xlabel("spike nr.", fontweight='bold')
+
+        plt.tight_layout()
+
+        fig.savefig('plot_srp_easySRP.svg', dpi=1200, transparent=True, bbox_inches='tight')
 
         plt.show()
 
@@ -638,7 +656,9 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
     npanels = len(list(target_dict.keys()))
 
     if npanels > 1:
-        fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
+        fig, ([ax1, ax2, ax3, ax4], [ax5, ax6, ax7, ax8]) = plt.subplots(2, 4, figsize=(10, 6))
+
+        axes = (ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8)
 
         for ix, key in enumerate(list(target_dict.keys())):
 
@@ -656,14 +676,14 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
 
           for i in range(47):
             if i == 46:
-              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
+              axes[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
             else:
-              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
+              axes[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
 
           if type(target_dict[key][0]) is not np.float64:
               errors = np.nanstd(target_dict[key], 0)
 
-              fig.panels[ix].errorbar(
+              axes[ix].errorbar(
                   xax,
                   np.nanmean(target_dict[key], 0),
                   yerr=errors,
@@ -675,21 +695,26 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
               )
 
           if protocols != None:
-              fig.panels[ix].set_title(protocols[key])
+              axes[ix].set_title(protocols[key], fontweight='bold')
           else:
-              fig.panels[ix].set_title(key)
+              axes[ix].set_title(key)
             
           if len(xax) <= 10:
-              fig.panels[ix].set_xticks(xax)
+              axes[ix].set_xticks(xax)
           else:
               ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
-              fig.panels[ix].set_xticks(ticks)
+              axes[ix].set_xticks(ticks)
             
-          fig.panels[ix].set_ylim(0.5, 9)
-          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+          axes[ix].set_ylim(0.5, 9)
+          axes[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
-        fig.panels[0].legend(frameon=False)
-        fig.panels[0].set_ylabel("norm. EPSC amplitude")
+        axes[0].legend(frameon=False, fontsize=10)
+        axes[0].set_ylabel("norm. EPSC amplitude", fontweight='bold')
+        ax5.set_xlabel("spike nr.", fontweight='bold')
+
+        plt.tight_layout()
+
+        fig.savefig('plot_srp_ExpSRP.svg', dpi=1200, transparent=True, bbox_inches='tight')
 
         plt.show()
 
