@@ -18,12 +18,11 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
 """
 
 import numpy as np
-from scipy.special import gamma  # gamma function
+import scipy.stats as stats
 from scipy.optimize import minimize
 from scipy._lib._util import MapWrapper
-from srplasticity.srp import ExpSRP
+from srplasticity.srp import ExpSRP, _refactor_gamma_parameters
 from srplasticity.tools import MinimizeWrapper
-from warnings import catch_warnings, warn
 
 # Multiprocessing
 import copyreg
@@ -44,28 +43,8 @@ def _nll(y, mu, sigma, offset=1e-8):
     :param mu: (np.array) set of means
     :param sigma: (np.array) set of stds
     """
-
-    #note, we add a very small value to avoid NaN values from taking the 
-    #log of zero
-    #here we also ensure the offset does not create a value of zero
-    offsets_arr = np.full(mu.shape, offset)
-    offset_mu = np.where(np.isclose(mu, -1*offsets_arr, atol=1e-8), 2*offsets_arr, offsets_arr) 
-    
-    #check that the gamma function does not produce values above the 64bit
-    #maximum float value replace otherwise
-    gamma_in = gamma(mu ** 2 / (sigma ** 2 + offsets_arr))   
-    gamma_out = np.where(np.isinf(gamma_in), 1e46, gamma_in)
-
-    #the function takes a nansum which means it will discount any entries 
-    #containing non-numeric values
-    return np.nansum(
-        (
-            (y * mu) / (sigma ** 2 + offsets_arr)
-            - ((mu ** 2 / (sigma ** 2 + offsets_arr)) - 1) * np.log(y * (mu / (sigma ** 2 + offsets_arr))+ offsets_arr)
-            + np.log(gamma_out) 
-            + np.log((sigma ** 2 / (mu + offset_mu)) + offsets_arr)
-        )
-    )
+    shape, scale = _refactor_gamma_parameters(mu, sigma)
+    return np.nansum(-stats.gamma.logpdf(y, shape, scale=scale))
 
 
 def _mean_nll(y, mu, sigma):
@@ -378,7 +357,7 @@ copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def fit_srp_model_gridsearch(
+def fit_EXPSRP_model_gridsearch(
     stimulus_dict,
     target_dict,
     mu_taus,
@@ -461,7 +440,7 @@ def fit_srp_model_gridsearch(
     return fitted_params, bestsol, starts, fval, listres
 
 
-def fit_srp_model(
+def fit_EXPSRP_model(
     initial_guess,
     stimulus_dict,
     target_dict,
