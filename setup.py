@@ -22,6 +22,10 @@ def readme():
     with open('README.md') as f:
         return f.read()
 
+def requirements():
+    with open("requirements.txt", "r") as f:
+        return f.read()
+
 setup(name='srplasticity',
       version='0.0.2',
       long_description=readme(),
@@ -37,7 +41,8 @@ setup(name='srplasticity',
       license='GPLv3',
       packages=['srplasticity'],
       install_requires=[
-          'numpy==1.20.0',
-          'scipy==1.5.2',
+          requirements(),
+          'numpy>=1.24.4',
+          'scipy>=1.5.2',
           ],
       zip_safe=False)
