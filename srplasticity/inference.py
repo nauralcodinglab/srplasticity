@@ -35,7 +35,7 @@ import types
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def _nll(y, mu, sigma, offset=1e-8):
+def _nll(y, mu, sigma):
     """
     Negative Log Likelihood
 
