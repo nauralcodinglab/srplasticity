@@ -273,7 +273,7 @@ def plot_fit_easySRP(axis, model, target_dict, stimulus_dict, name_protocol, pro
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
-        errors = np.nanstd(target_dict[name_protocol], 0) / len(target_dict[name_protocol]) ** 0.5
+        errors = np.nanstd(target_dict[name_protocol], 0)
 
         axis.errorbar(
             xax,
@@ -560,17 +560,17 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
 
         for ix, key in enumerate(list(target_dict.keys())):
           mean, efficacies = model.run_ISIvec(stimulus_dict[key])
-          lower_SEM = mean - params["SD"] / len(target_dict[key]) ** 0.5
-          upper_SEM = mean + params["SD"] / len(target_dict[key]) ** 0.5
+          lower_SD = mean - params["SD"]
+          upper_SD = mean + params["SD"]
 
           xax = np.arange(1, len(mean) + 1)
           
-          fig.panels[ix].fill_between(xax, lower_SEM, upper_SEM, color="xkcd:light grey", label="SEM")
+          fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
           fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
 
           if type(target_dict[key][0]) is not np.float64:
 
-              errors = np.nanstd(target_dict[key], 0) / len(target_dict[key]) ** 0.5
+              errors = np.nanstd(target_dict[key], 0)
 
               fig.panels[ix].errorbar(
                   xax,
