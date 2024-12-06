@@ -244,14 +244,36 @@ def add_figure_letters(axes, size=14):
             family="sans-serif",
         )
 
+def plot_fit_easySRP(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
+    """
+    Plot the fit of the model to the target data for a given protocol
 
-def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
+    :param axis: The axis on which to plot the data
+    :type axis: matplotlib.axes.Axes
+    :param model: The SRP model with history dependent mean behaviour and fixed variance
+    :type model: class: 'easySRP'
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                            and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param name_protocol: The name of the protocol to be plotted
+    :type name_protocol: str
+    :param protocols: Dictionary where keys are protocol names (str) 
+                      and values are their descriptive names (str). 
+                      Defaults to None
+    :type protocols: dict, optional
+    """
 
-    mean, sigma, _ = model.run_ISIvec(stimulus_dict[name_protocol])
+    if model.__class__.__name__ != 'easySRP':
+        raise ValueError("'model' must be an instance of easySRP")
+
+    mean, efficacies = model.run_ISIvec(stimulus_dict[name_protocol])
     xax = np.arange(1, len(mean) + 1)
 
     if type(target_dict[name_protocol][0]) is not np.float64:
-        errors = np.nanstd(target_dict[name_protocol], 0) / 2
+        errors = np.nanstd(target_dict[name_protocol], 0) / len(target_dict[name_protocol]) ** 0.5
 
         axis.errorbar(
             xax,
@@ -265,16 +287,6 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
             markersize=3,
             label="Data",
         )
-
-    axis.text(
-        -0.10,
-        1.046,
-        string.ascii_uppercase[0],
-        transform=axis.transAxes,
-        size=11,
-        weight="bold",
-        usetex=False,
-    )
 
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
@@ -291,6 +303,84 @@ def plot_fit(axis, model, target_dict, stimulus_dict, name_protocol, protocols=N
     axis.set_ylabel("norm. EPSC")
     axis.set_xlabel("spike nr.")
 
+    plt.show()
+
+
+def plot_fit_ExpSRP(axis, model, target_dict, stimulus_dict, name_protocol, protocols=None):
+    """
+    Plot the fit of the model to the target data for a given protocol
+
+    :param axis: The axis on which to plot the data
+    :type axis: matplotlib.axes.Axes
+    :param model: The SRP model with history dependent mean and variance behaviours
+    :type model: class: 'ExpSRP'
+    :param target_dict: Dictionary where keys are protocol names 
+                        and values are NumPy arrays of the responses
+    :type target_dict: dict
+    :param stimulus_dict: Dictionary where keys are protocol names 
+                            and values are lists of ISIs
+    :type stimulus_dict: dict
+    :param name_protocol: The name of the protocol to be plotted
+    :type name_protocol: str
+    :param protocols: Dictionary where keys are protocol names (str) 
+                      and values are their descriptive names (str). 
+                      Defaults to None
+    :type protocols: dict, optional
+    """
+
+    if model.__class__.__name__ != 'ExpSRP':
+        raise ValueError("'model' must be an instance of ExpSRP")
+
+    mean, sigma, efficacies = model.run_ISIvec(stimulus_dict[name_protocol])
+    shape, scale = _refactor_gamma_parameters(mean, sigma)
+    xax = np.arange(1, len(mean) + 1)
+
+    segments = []
+    for i in np.arange(0.025, 0.98, 0.01):
+      bound = stats.gamma.ppf(i, shape, scale=scale)
+      segments.append([bound])
+
+    cmap = plt.cm.Greys
+    colors = cmap(np.arange(10, 151, 3))
+
+    for i in range(47):
+      if i == 46:
+        axis.fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
+      else:
+        axis.fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
+
+    if type(target_dict[name_protocol][0]) is not np.float64:
+        errors = np.nanstd(target_dict[name_protocol], 0)
+
+        axis.errorbar(
+            xax,
+            np.nanmean(target_dict[name_protocol], 0),
+            yerr=errors,
+            color="black",
+            marker="s",
+            capsize=2,
+            lw=1,
+            elinewidth = 0.7,
+            markersize=3,
+            label="Data",
+        )
+
+    axis.spines['top'].set_visible(False)
+    axis.spines['right'].set_visible(False)
+    if protocols != None:
+        axis.set_title(protocols[name_protocol], fontweight='semibold', )
+    else:
+        axis.set_title(name_protocol)
+    axis.set_xticks(xax)
+    axis.set_ylim(0.5, 9)
+    axis.set_yticks([1, 3, 5, 7, 9])
+
+    axis.legend(frameon=False)
+    axis.set_ylabel("norm. EPSC")
+    axis.set_xlabel("spike nr.")
+
+    plt.show()
+
 def plot_mse_fig(axis, mses):
     """
     Plot the Mean Squared Error (MSE) as a boxplot on the given axis
@@ -306,16 +396,6 @@ def plot_mse_fig(axis, mses):
     axis.boxplot(mses, medianprops = dict(color="#03719c", linewidth=1.25), showfliers=False)
     axis.set_ylabel("MSE", labelpad=8)
     axis.set_xticks([])
-
-    axis.text(
-        -0.15,
-        1.1,
-        string.ascii_uppercase[1],
-        transform=axis.transAxes,
-        size=11,
-        weight="bold",
-        usetex=False,
-    )
 
     plt.show()
 
@@ -343,16 +423,6 @@ def plot_kernel_easySRP(axis, model, colour="#03719c"):
     axis.plot(kernel_x, kernel_y, color=colour)
     axis.set_ylabel("Kernel", labelpad=1)
     axis.set_xlabel("Time (ms)", labelpad=1)
-
-    axis.text(
-        -0.15,
-        1.1,
-        string.ascii_uppercase[2],
-        transform=axis.transAxes,
-        size=11,
-        weight="bold",
-        usetex=False,
-    )
 
     plt.show()
 
