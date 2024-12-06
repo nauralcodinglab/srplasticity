@@ -18,10 +18,10 @@ Copyright (C) 2021 Julian Rossbroich, Daniel Trotter, John Beninger, Richard Nau
 """
 
 import numpy as np
-from scipy.special import gamma  # gamma function
+import scipy.stats as stats
 from scipy.optimize import minimize
 from scipy._lib._util import MapWrapper
-from srplasticity.srp import ExpSRP
+from srplasticity.srp import ExpSRP, _refactor_gamma_parameters
 from srplasticity.tools import MinimizeWrapper
 
 # Multiprocessing
@@ -35,7 +35,7 @@ import types
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def _nll(y, mu, sigma):
+def _nll(y, mu, sigma, offset=1e-8):
     """
     Negative Log Likelihood
 
@@ -43,17 +43,8 @@ def _nll(y, mu, sigma):
     :param mu: (np.array) set of means
     :param sigma: (np.array) set of stds
     """
-
-    #note, we add a very small value to avoid NaN values from taking the 
-    #log of zero
-    return np.nansum(
-        (
-            (y * mu) / (sigma ** 2)
-            - ((mu ** 2 / sigma ** 2) - 1) * np.log(y * (mu / (sigma ** 2))+ 1e-10)
-            + np.log(gamma(mu ** 2 / sigma ** 2))
-            + np.log(sigma ** 2 / mu)
-        )
-    )
+    shape, scale = _refactor_gamma_parameters(mu, sigma)
+    return np.nansum(-stats.gamma.logpdf(y, shape, scale=scale))
 
 
 def _mean_nll(y, mu, sigma):
@@ -366,7 +357,7 @@ copyreg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-def fit_srp_model_gridsearch(
+def fit_EXPSRP_model_gridsearch(
     stimulus_dict,
     target_dict,
     mu_taus,
@@ -432,6 +423,7 @@ def fit_srp_model_gridsearch(
 
     # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
     # iterate over input arrays, possibly in parallel
+    #with catch_warnings(record=True) as w:
     with MapWrapper(pool=workers) as mapper:
         listres = np.array(list(mapper(wrapped_minimizer, starts)))
 
@@ -448,7 +440,7 @@ def fit_srp_model_gridsearch(
     return fitted_params, bestsol, starts, fval, listres
 
 
-def fit_srp_model(
+def fit_EXPSRP_model(
     initial_guess,
     stimulus_dict,
     target_dict,
