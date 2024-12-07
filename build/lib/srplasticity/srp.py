@@ -480,14 +480,15 @@ class easySRP(ExpSRP):
         self.SD = SD
         self.rng = np.random.default_rng()
     #update sample method
-    def _sample(self, mean, sigma, ntrials):
+    def _sample(self, mean, ntrials, sigma=None):
         """
         Samples `ntrials` response amplitudes from a normal distribution 
         given mean and sigma
         
         return: sampled efficacies
         """
-
+        if sigma is None:
+          sigma = self.SD
         return self.rng.normal(loc=mean, scale=sigma,
             size=(ntrials, len(np.atleast_1d(mean))))
     
@@ -522,7 +523,7 @@ class easySRP(ExpSRP):
             means = self.nlin(np.array(means) + self.mu_baseline) * self.mu_scale
 
             # Sample from gamma distribution
-            efficacies = self._sample(means, self.SD, ntrials)
+            efficacies = self._sample(means, ntrials)
 
             return means, efficacies
 
@@ -535,7 +536,7 @@ class easySRP(ExpSRP):
             nonlinear_readout = self.nlin(filtered_spiketrain) * self.mu_scale
             efficacy_train = nonlinear_readout * spiketrain
             means = efficacy_train[np.where(spiketrain == 1)[0]]
-            efficacies = self._sample(means, self.SD, ntrials)
+            efficacies = self._sample(means, ntrials)
     
             if return_all:
                 return {
@@ -548,3 +549,23 @@ class easySRP(ExpSRP):
     
             else:
                 return means, efficacies
+
+    def run_spiketrain(self, spiketrain, ntrials=1):
+
+        spiketimes = np.where(spiketrain == 1)[0]
+        efficacytrains = np.zeros((ntrials, len(spiketrain)))
+
+        mean = (
+            self.nlin(
+                self.mu_baseline
+                + _convolve_spiketrain_with_kernel(spiketrain, self.mu_kernel)
+            )
+            * spiketrain
+            * self.mu_scale
+        )
+
+        # Sampling from normal distribution
+        efficacies = self._sample(mean[spiketimes], ntrials)
+        efficacytrains[:, spiketimes] = efficacies
+
+        return mean[spiketimes], self.SD, efficacies, efficacytrains
