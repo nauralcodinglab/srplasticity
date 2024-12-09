@@ -524,10 +524,12 @@ def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol
     plt.show()
 
 
-def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
+def plot_srp_easySRP(axes, params, target_dict, stimulus_dict, protocols=None):
     """
     Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
 
+    :param axes: The axes on which to plot the efficacy kernel
+    :type axes: matplotlib.axes.Axes
     :param params: Dict of easySRP parameters:
                     {"mu_baseline": float,
                      "mu_amps": numpy array,
@@ -556,7 +558,6 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
     npanels = len(list(target_dict.keys()))
 
     if npanels > 1:
-        fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
           mean, efficacies = model.run_ISIvec(stimulus_dict[key])
@@ -565,14 +566,14 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
 
           xax = np.arange(1, len(mean) + 1)
           
-          fig.panels[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
-          fig.panels[ix].plot(xax, mean, color="#cc3311", label="SRP model")
+          axes[ix].fill_between(xax, lower_SD, upper_SD, color="xkcd:light grey", label="SD")
+          axes[ix].plot(xax, mean, color="#cc3311", label="SRP model")
 
           if type(target_dict[key][0]) is not np.float64:
 
               errors = np.nanstd(target_dict[key], 0)
 
-              fig.panels[ix].errorbar(
+              axes[ix].errorbar(
                   xax,
                   np.nanmean(target_dict[key], 0),
                   yerr=errors,
@@ -584,29 +585,33 @@ def plot_srp_easySRP(params, target_dict, stimulus_dict, protocols=None):
               )
 
           if protocols != None:
-              fig.panels[ix].set_title(protocols[key])
+              axes[ix].set_title(protocols[key])
           else:
-              fig.panels[ix].set_title(key)
+              axes[ix].set_title(key)
 
           if len(xax) <= 10:
-              fig.panels[ix].set_xticks(xax)
+              axes[ix].set_xticks(xax)
           else:
               ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
-              fig.panels[ix].set_xticks(ticks)
+              axes[ix].set_xticks(ticks)
 
-          fig.panels[ix].set_ylim(0.5, 9)
-          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+          axes[ix].set_ylim(0.5, 9)
+          axes[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
-        fig.panels[0].legend(frameon=False)
-        fig.panels[0].set_ylabel("norm. EPSC amplitude")
+        axes[0].legend(frameon=False)
+        axes[0].set_ylabel("norm. amplitude")
+
+        plt.tight_layout()
 
         plt.show()
 
 
-def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
+def plot_srp_ExpSRP(axes, params, target_dict, stimulus_dict, protocols=None):
     """
     Plot the Spike Response Plasticity (SRP) model fit for multiple protocols
 
+    :param axes: The axes on which to plot the efficacy kernel
+    :type axes: matplotlib.axes.Axes
     :param params: Dict of ExpSRP parameters:
                      {"mu_baseline": float,
                      "mu_amps": numpy array,
@@ -638,7 +643,6 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
     npanels = len(list(target_dict.keys()))
 
     if npanels > 1:
-        fig = MultiPanel(grid=[npanels], figsize=(npanels * 3, 3))
 
         for ix, key in enumerate(list(target_dict.keys())):
 
@@ -656,14 +660,14 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
 
           for i in range(47):
             if i == 46:
-              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
+              axes[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i], label="Fitted Gamma")
             else:
-              fig.panels[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
+              axes[ix].fill_between(xax, list(*segments[i]), list(*segments[95-i]), color=colors[i])
 
           if type(target_dict[key][0]) is not np.float64:
               errors = np.nanstd(target_dict[key], 0)
 
-              fig.panels[ix].errorbar(
+              axes[ix].errorbar(
                   xax,
                   np.nanmean(target_dict[key], 0),
                   yerr=errors,
@@ -675,36 +679,38 @@ def plot_srp_ExpSRP(params, target_dict, stimulus_dict, protocols=None):
               )
 
           if protocols != None:
-              fig.panels[ix].set_title(protocols[key])
+              axes[ix].set_title(protocols[key])
           else:
-              fig.panels[ix].set_title(key)
+              axes[ix].set_title(key)
             
           if len(xax) <= 10:
-              fig.panels[ix].set_xticks(xax)
+              axes[ix].set_xticks(xax)
           else:
               ticks = np.arange(1, len(mean) + 1, math.ceil(len(mean) / 10))
-              fig.panels[ix].set_xticks(ticks)
+              axes[ix].set_xticks(ticks)
             
-          fig.panels[ix].set_ylim(0.5, 9)
-          fig.panels[ix].set_yticks([1, 3, 5, 7, 9, 11])
+          axes[ix].set_ylim(0.5, 9)
+          axes[ix].set_yticks([1, 3, 5, 7, 9, 11])
 
-        fig.panels[0].legend(frameon=False)
-        fig.panels[0].set_ylabel("norm. EPSC amplitude")
+        axes[0].legend(frameon=False)
+        axes[0].set_ylabel("norm. amplitude")
+
+        plt.tight_layout()
 
         plt.show()
 
 
-def plot_estimates(means, efficacies):
+def plot_estimates(axis, means, efficacies):
     """
     Plot sample estimates over time with the corresponding mean values.
 
+    :param axis: The axis on which to plot the efficacy kernel
+    :type axis: matplotlib.axes.Axes
     :param means: A list of mean predicted responses
     :type means: list
     :param efficacies: A list of sample predicted responses
     :type efficacies: list
     """
-
-    fig, axis = plt.subplots()
 
     if type(efficacies[0]) != np.float64 and type(efficacies[0]) != float:
         xax = range(len(efficacies[0]))
@@ -729,21 +735,23 @@ def plot_estimates(means, efficacies):
     if len(xax) > 10:
         ticks = np.arange(1, len(means) + 1, math.ceil(len(means) / 10))
         axis.set_xticks(ticks)
-    fig.legend(frameon=False)
+    
+    axis.legend(frameon=False)
 
     plt.show()
 
 
-def plot_spike_train(spiketrain):
+def plot_spike_train(axis, spiketrain):
     """
     Plot a spike train
 
+    :param axis: The axis on which to plot the efficacy kernel
+    :type axis: matplotlib.axes.Axes
     :param spiketrain: A binary stimulation vector from a
                         vector with ISI intervals to be plotted
     :type spiketrain: Numpy array
     """
-
-    fig, axis = plt.subplots()
+    
     axis.plot(spiketrain, lw=0.7, color='black')
     axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
