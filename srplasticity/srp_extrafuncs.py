@@ -7,7 +7,6 @@ from scipy.optimize import shgo
 #import libraries for other fitting and plotting functions
 import string
 import matplotlib.pyplot as plt
-from spiffyplots import MultiPanel
 from srplasticity.srp import ExpSRP, _refactor_gamma_parameters
 import scipy.stats as stats
 #the functions in the import below are redefined in the code
@@ -300,7 +299,7 @@ def plot_fit_easySRP(axis, model, target_dict, stimulus_dict, name_protocol, pro
     axis.set_yticks([1, 3, 5, 7, 9])
 
     axis.legend(frameon=False)
-    axis.set_ylabel("norm. EPSC")
+    axis.set_ylabel("norm. amplitude")
     axis.set_xlabel("spike nr.")
 
     plt.show()
@@ -376,7 +375,7 @@ def plot_fit_ExpSRP(axis, model, target_dict, stimulus_dict, name_protocol, prot
     axis.set_yticks([1, 3, 5, 7, 9])
 
     axis.legend(frameon=False)
-    axis.set_ylabel("norm. EPSC")
+    axis.set_ylabel("norm. amplitude")
     axis.set_xlabel("spike nr.")
 
     plt.show()
@@ -465,62 +464,6 @@ def plot_kernel_ExpSRP(axis1, axis2, model, colour_mu="#03719c", colour_sigma="#
     axis2.set_ylabel("Kernel", labelpad=1)
     axis2.set_xlabel("Time (ms)", labelpad=1)
 
-    plt.show()
-
-
-def plot_fig(params, target_dict, stimulus_dict, mses, chosen_protocol, protocol_names=None):
-    """
-    Generate a multi-panel figure to visualize model fit, MSE, and efficacy kernel.
-
-    This function creates a multi-panel figure with three subplots:
-    1. The fit of the model to the target data for the chosen protocol.
-    2. A boxplot of the MSE values.
-    3. The efficacy kernel based on the provided amplitudes, time constants, and baseline value.
-
-    :param params: Dict of easySRP parameters:
-                   {"mu_baseline": float,
-                    "mu_amps": numpy array,
-                    "mu_taus": numpy array,
-                    "SD": float,
-                    "mu_scale": int, float or None}
-    :type params: dict
-    :param target_dict: Dictionary where keys are protocol names 
-                        and values are NumPy arrays of the responses
-    :type target_dict: dict
-    :param stimulus_dict: Dictionary where keys are protocol names 
-                        and values are lists of ISIs
-    :type stimulus_dict: dict
-    :param mses: List or array of Mean Squared Error (MSE) values
-    :type mses: list
-    :param chosen_protocol: The name of the protocol to be plotted
-    :type chosen_protocol: str
-    :param protocol_names: Dictionary where keys are protocol names (str)
-                           and values are their descriptive names (str). 
-                           Defaults to None
-    :type protocol_names: dict, optional
-    """
-
-
-    try:
-        mu_baseline = params["mu_baseline"]
-        mu_amps = params["mu_amps"]
-        mu_taus = params["mu_taus"]
-
-        model = easySRP(**params)
-    except (TypeError, KeyError):
-        raise ValueError("'params' must correspond to a dict of easySRP parameters")
-    except Exception as e:
-        raise ValueError(f"An unexpected error occurred: {e}")
-
-    fig = MultiPanel(grid=[(range(2), range(2)), (0, 2), (1, 2)], figsize=(7, 3.75), wspace=0.5, hspace=0.2)
-
-    plot_fit(fig.panels[0], model, target_dict, stimulus_dict, chosen_protocol, protocols=protocol_names)
-
-    plot_mse_fig(fig.panels[1], mses)
-
-    plot_kernel(fig.panels[2], mu_taus, mu_amps, mu_baseline)
-
-    # add_figure_letters([fig.panels[ix] for ix in axes_with_letter], 11)
     plt.show()
 
 
@@ -729,7 +672,7 @@ def plot_estimates(axis, means, efficacies):
 
     axis.spines['top'].set_visible(False)
     axis.spines['right'].set_visible(False)
-    axis.set_ylabel("Predicted EPSC", labelpad=1, size=8)
+    axis.set_ylabel("Norm Amplitude", labelpad=1, size=8)
     axis.set_xticks(range(1, len(xax) + 1))
     axis.set_xlabel("spike nr.", labelpad=1)
     if len(xax) > 10:
