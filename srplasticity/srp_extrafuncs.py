@@ -700,17 +700,17 @@ def plot_srp_ExpSRP(axes, params, target_dict, stimulus_dict, protocols=None):
         plt.show()
 
 
-def plot_estimates(means, efficacies):
+def plot_estimates(axis, means, efficacies):
     """
     Plot sample estimates over time with the corresponding mean values.
 
+    :param axis: The axis on which to plot the efficacy kernel
+    :type axis: matplotlib.axes.Axes
     :param means: A list of mean predicted responses
     :type means: list
     :param efficacies: A list of sample predicted responses
     :type efficacies: list
     """
-
-    fig, axis = plt.subplots()
 
     if type(efficacies[0]) != np.float64 and type(efficacies[0]) != float:
         xax = range(len(efficacies[0]))
@@ -735,21 +735,23 @@ def plot_estimates(means, efficacies):
     if len(xax) > 10:
         ticks = np.arange(1, len(means) + 1, math.ceil(len(means) / 10))
         axis.set_xticks(ticks)
-    fig.legend(frameon=False)
+    
+    axis.legend(frameon=False)
 
     plt.show()
 
 
-def plot_spike_train(spiketrain):
+def plot_spike_train(axis, spiketrain):
     """
     Plot a spike train
 
+    :param axis: The axis on which to plot the efficacy kernel
+    :type axis: matplotlib.axes.Axes
     :param spiketrain: A binary stimulation vector from a
                         vector with ISI intervals to be plotted
     :type spiketrain: Numpy array
     """
-
-    fig, axis = plt.subplots()
+    
     axis.plot(spiketrain, lw=0.7, color='black')
     axis.set_ylim(-1e-5, 5e-6)
     axis.axis("off")
