@@ -20,7 +20,7 @@ Implementation of a linear-nonlinear model of short-term plasticity as described
 
 ## Tutorial
 Users can access a detailed introductory tutorial for this package hosted on Google Colab through at
-https://colab.research.google.com/drive/1nxEUrWjJz7z5JO2PoWOzqn4tYOBMFpL6?usp=sharing 
+https://colab.research.google.com/drive/1Cp3lsnCCjTl_vRgXjeHzkb39Sx4m21uS?usp=sharing  
 
 ## Installation
 The version of srplasticity package corresponding to the paper above can be installed directly using the following command: 
