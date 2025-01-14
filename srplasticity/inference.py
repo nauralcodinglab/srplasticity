@@ -35,6 +35,24 @@ import types
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
+def _ExpSRP_tuple_to_dict(in_tuple):
+    """
+    Convert standardized tuple of easySRP parameters to a dict
+    
+    :param in_tuple: standardized tuple 
+    :type: tuple
+    
+    :return: Dict of easySRP parameters
+    """
+    return {"mu_baseline": in_tuple[0],
+            "mu_amps": in_tuple[1],
+            "mu_taus": in_tuple[2],
+            "sigma_baseline": in_tuple[3],
+            "sigma_amps": in_tuple[4],
+            "sigma_taus": in_tuple[5],
+            "mu_scale": in_tuple[6],
+            "sigma_scale": in_tuple[7]}
+
 def _nll(y, mu, sigma):
     """
     Negative Log Likelihood
@@ -491,3 +509,139 @@ def fit_EXPSRP_model(
     params = _convert_fitting_params(optimizer_res["x"], mu_taus, sigma_taus, mu_scale)
 
     return params, optimizer_res
+
+def fit_srp_model(
+    initial_guess,
+    stimulus_dict,
+    target_dict,
+    mu_taus,
+    sigma_taus,
+    mu_scale=None,
+    bounds="default",
+    loss="default",
+    algo="L-BFGS-B",
+    **kwargs
+):
+    """
+    Fitting the SRP model to data using scipy.optimize.minimize
+
+    :param initial_guess: list of parameters:
+            [mu_baseline, *mu_amps,sigma_baseline, *sigma_amps, sigma_scale]
+
+    :param stimulus_dict: mapping of protocol keys to isi stimulation vectors
+    :param target_dict: mapping of protocol keys to response matrices
+    :param mu_taus: predefined time constants for mean kernel
+    :param sigma_taus: predefined time constants for sigma kernel
+    :param mu_scale: mean scale, defaults to None for normalized data
+    :param bounds: bounds for parameters
+    :param loss: type of loss to be used. One of:
+            'default':  Sum of squared error across all observations
+            'equal':    Assign equal weight to each stimulation protocol instead of each observation.
+                        This computes the mean squared error for each protocol separately.
+    :param algo: Algorithm for fitting procedure
+    :param kwargs: keyword args to be passed to scipy.optimize.brute
+    :return: output of scipy.minimize
+    """
+    print("This function is deprecated, please use fit_EXPSRP_model instead.")
+
+    mu_taus = np.atleast_1d(mu_taus)
+    sigma_taus = np.atleast_1d(sigma_taus)
+
+    if bounds == "default":
+        bounds = _default_parameter_bounds(mu_taus, sigma_taus)
+
+    optimizer_res = minimize(
+        _objective_function,
+        x0=initial_guess,
+        method=algo,
+        bounds=bounds,
+        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss),
+        **kwargs
+    )
+
+    params = _convert_fitting_params(optimizer_res["x"], mu_taus, sigma_taus, mu_scale)
+
+    return params, optimizer_res
+
+def fit_srp_model_gridsearch(
+    stimulus_dict,
+    target_dict,
+    mu_taus,
+    sigma_taus,
+    param_ranges="default",
+    mu_scale=None,
+    sigma_scale=1,
+    bounds="default",
+    method="L-BFGS-B",
+    loss="default",
+    workers=1,
+    **kwargs
+):
+    """
+    Fitting the SRP model using a gridsearch.
+
+    :param stimulus_dict: dictionary of protocol key - isivec mapping
+    :param target_dict: dictionary of protocol key - target amplitudes
+    :param mu_taus: mu time constants
+    :param sigma_taus: sigma time constants
+    :param target_dict: dictionary of protocol key - target amplitudes
+    :param param_ranges: Optional - ranges of parameters in form of a tuple of slice objects
+    :param mu_scale: mu scale (defaults to None for normalized data)
+    :param sigma_scale: sigma scale in case param_ranges only covers 2 dimensions
+    :param bounds: bounds for parameters to be passed to minimizer function
+    :param method: algorithm for minimizer function
+    :param loss: type of loss to be used. One of:
+            'default':  Sum of squared error across all observations
+            'equal':    Assign equal weight to each stimulation protocol instead of each observation.
+                        This computes the mean squared error for each protocol separately.
+    :param workers: number of processors
+    """
+    print("This function is deprecated, please use fit_EXPSRP_model_gridsearch instead.")
+
+    # 1. SET PARAMETER BOUNDS
+    mu_taus = np.atleast_1d(mu_taus)
+    sigma_taus = np.atleast_1d(sigma_taus)
+
+    if bounds == "default":
+        bounds = _default_parameter_bounds(mu_taus, sigma_taus)
+
+    # 2. INITIALIZE WRAPPED MINIMIZER FUNCTION
+    wrapped_minimizer = MinimizeWrapper(
+        _objective_function,
+        args=(target_dict, stimulus_dict, mu_taus, sigma_taus, mu_scale, loss),
+        bounds=bounds,
+        method=method,
+        **kwargs
+    )
+
+    # 3. MAKE GRID
+    if param_ranges == "default":
+        param_ranges = _default_parameter_ranges()
+    grid = _get_grid(param_ranges)
+    starts = _starts_from_grid(grid, mu_taus, sigma_taus, sigma_scale)
+
+    # 4. RUN
+
+    print("STARTING GRID SEARCH FITTING PROCEDURE")
+    print("- Using {} cores in parallel".format(workers))
+    print("- Iterating over a total of {} initial starts".format(len(grid)))
+
+    print("Make a coffee. This might take a while...")
+
+    # CODE COPIED FROM SCIPY.OPTIMIZE.BRUTE:
+    # iterate over input arrays, possibly in parallel
+    #with catch_warnings(record=True) as w:
+    with MapWrapper(pool=workers) as mapper:
+        listres = np.array(list(mapper(wrapped_minimizer, starts)))
+
+    fval = np.array(
+        [res["fun"] if res["success"] is True else np.nan for res in listres]
+    )
+
+    bestsol_ix = np.nanargmin(fval)
+    bestsol = listres[bestsol_ix]
+    bestsol["initial_guess"] = starts[bestsol_ix]
+
+    fitted_params = _convert_fitting_params(bestsol["x"], mu_taus, sigma_taus, mu_scale)
+
+    return fitted_params, bestsol, starts, fval, listres
