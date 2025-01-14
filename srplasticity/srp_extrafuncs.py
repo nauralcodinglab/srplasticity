@@ -754,7 +754,7 @@ def norm_responses(target_dict):
             divisors = target_dict[protocol][:, 0]
             first_spike_list.extend(divisors)
         except:
-            print("no entry")
+            print(f"Protocol key '{protocol}'will be skipped as it does not contain a 2D data array, as expected.")
 
     if len(first_spike_list) > 0:
         averaged_divisor = np.nanmean(first_spike_list)
