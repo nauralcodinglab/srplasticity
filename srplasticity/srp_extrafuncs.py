@@ -108,6 +108,7 @@ def fit_srp_model(
     )
     
     mse = optimizer_res.fun
+    print("Fitting run loss = "+str(mse))
     SD = math.pow(mse, 0.5)
     fitted_mu_baseline = optimizer_res.x[0]
     fitted_mu_amps = optimizer_res.x[1:len(mu_taus)+1]
@@ -137,7 +138,6 @@ def mse_loss(target_vals, mean_predicted):
     for protocol, responses in target_vals.items():
         loss.append(np.square(responses-mean_predicted[protocol]).flatten())
     final_loss = np.nanmean(np.concatenate(loss))
-    print("loss = "+str(final_loss))
     return final_loss
     
 #--------------------------------------------------------------------
